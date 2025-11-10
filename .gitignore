@@ -1,0 +1,63 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Backups
+*.bak
+backup/
+
+# NetBoozt specific
+optimizations_backup_*.json
+speedtest_results_*.json
+network_failover.log
+
+# Development tools (NOT for end users - gitignored)
+# These are internal dev scripts, not part of open-source distribution
+tools/                      # Dev scripts (screenshot gen, favicon gen, etc.)
+docs/assets/screenshots/    # Auto-generated screenshots (upload to VPS instead)
+playwright/                 # Browser automation cache
+.playwright/
+
+# Keep these assets (small, version-controlled)
+!docs/assets/logo/          # Logos and favicons (46 KB total) - COMMITTED
+
+# Temporary files
+*.tmp
+temp/
