@@ -1,0 +1,26 @@
+{
+  "name": "netboozt-tauri",
+  "version": "3.0.0",
+  "description": "NetBoozt - Network Optimization Tool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^2.0.3",
+    "@sveltejs/kit": "^1.27.4",
+    "@tauri-apps/cli": "^1.5.6",
+    "svelte": "^4.2.3",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^1.5.1"
+  }
+}

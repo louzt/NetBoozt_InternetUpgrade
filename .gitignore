@@ -13,8 +13,16 @@ ENV/
 # Distribution / packaging
 build/
 dist/
+build_cache/
 *.egg-info/
 .eggs/
+
+# Releases - Keep structure but ignore executables
+releases/windows/*.exe
+releases/linux/*
+releases/macos/*
+!releases/windows/README.txt
+!releases/README.md
 
 # Testing
 .pytest_cache/

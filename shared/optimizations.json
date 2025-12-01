@@ -1,0 +1,272 @@
+{
+  "version": "2.2",
+  "description": "Network optimization definitions for NetBoozt",
+  
+  "categories": [
+    {
+      "id": "tcp_core",
+      "name": "TCP Core",
+      "description": "Core TCP/IP stack optimizations"
+    },
+    {
+      "id": "tcp_advanced",
+      "name": "TCP Advanced",
+      "description": "Advanced algorithms similar to BBR"
+    },
+    {
+      "id": "network_adapter",
+      "name": "Network Adapter",
+      "description": "NIC-level optimizations"
+    },
+    {
+      "id": "dns",
+      "name": "DNS",
+      "description": "DNS resolution optimizations"
+    }
+  ],
+  
+  "optimizations": [
+    {
+      "id": "tcp_congestion",
+      "name": "TCP Congestion Control",
+      "category": "tcp_core",
+      "description": "Algorithm similar to BBR from Linux. Improves throughput and reduces latency under load.",
+      "command": "netsh int tcp set supplemental Template=Internet CongestionProvider=NewReno",
+      "verify_command": "netsh int tcp show supplemental",
+      "default_value": "none",
+      "optimized_value": "NewReno",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true,
+      "docs_link": "docs/optimizations/tcp-congestion-control.md"
+    },
+    {
+      "id": "rss",
+      "name": "Receive Side Scaling (RSS)",
+      "category": "network_adapter",
+      "description": "Distributes packet processing across multiple CPUs. Improves performance on multi-core systems.",
+      "command": "netsh int tcp set global rss=enabled",
+      "verify_command": "netsh int tcp show global | findstr RSS",
+      "default_value": "enabled",
+      "optimized_value": "enabled",
+      "risk_level": "low",
+      "profiles": ["conservative", "balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "tcp_autotuning",
+      "name": "TCP Autotuning",
+      "category": "tcp_core",
+      "description": "Dynamically adjusts receive buffer size up to 16MB for high-bandwidth connections.",
+      "command": "netsh int tcp set global autotuninglevel=normal",
+      "verify_command": "netsh int tcp show global | findstr Auto",
+      "default_value": "normal",
+      "optimized_value": "normal",
+      "risk_level": "low",
+      "profiles": ["conservative", "balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "hystart",
+      "name": "HyStart++",
+      "category": "tcp_advanced",
+      "description": "Fast slow-start algorithm (like BBR). Exits slow start earlier to avoid queue buildup.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableHyStart /t REG_DWORD /d 1 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableHyStart",
+      "default_value": "0",
+      "optimized_value": "1",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": true,
+      "reversible": true,
+      "docs_link": "docs/optimizations/bbr-vs-cubic.md"
+    },
+    {
+      "id": "prr",
+      "name": "Proportional Rate Reduction (PRR)",
+      "category": "tcp_advanced",
+      "description": "Smoother recovery from packet loss (like BBR). Doesn't drop speed as aggressively as CUBIC.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnablePrr /t REG_DWORD /d 1 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnablePrr",
+      "default_value": "0",
+      "optimized_value": "1",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": true,
+      "reversible": true
+    },
+    {
+      "id": "ecn",
+      "name": "Explicit Congestion Notification (ECN)",
+      "category": "tcp_advanced",
+      "description": "Routers signal congestion before dropping packets. BBR-like congestion detection without loss.",
+      "command": "netsh int tcp set global ecncapability=enabled",
+      "verify_command": "netsh int tcp show global | findstr ECN",
+      "default_value": "disabled",
+      "optimized_value": "enabled",
+      "risk_level": "medium",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true,
+      "notes": "Some old firewalls may have issues with ECN"
+    },
+    {
+      "id": "tcp_fast_open",
+      "name": "TCP Fast Open",
+      "category": "tcp_core",
+      "description": "Reduces connection latency by sending data in the SYN packet. Saves one RTT on reconnections.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableTFO /t REG_DWORD /d 1 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableTFO",
+      "default_value": "0",
+      "optimized_value": "1",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": true,
+      "reversible": true
+    },
+    {
+      "id": "tcp_timestamps",
+      "name": "TCP Timestamps",
+      "category": "tcp_core",
+      "description": "Better RTT calculation and PAWS protection. Required for some advanced features.",
+      "command": "netsh int tcp set global timestamps=enabled",
+      "verify_command": "netsh int tcp show global | findstr Timestamps",
+      "default_value": "disabled",
+      "optimized_value": "enabled",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "tcp_pacing",
+      "name": "TCP Pacing",
+      "category": "tcp_advanced",
+      "description": "Smoother packet sending (like BBR's pacing). Avoids bursts that trigger bufferbloat.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableWsd /t REG_DWORD /d 0 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v EnableWsd",
+      "default_value": "1",
+      "optimized_value": "0",
+      "risk_level": "low",
+      "profiles": ["aggressive"],
+      "requires_reboot": true,
+      "reversible": true,
+      "notes": "Disables Windows Scaling Heuristics for better pacing"
+    },
+    {
+      "id": "initial_rto",
+      "name": "Initial RTO Optimization",
+      "category": "tcp_core",
+      "description": "Faster recovery from timeouts. Reduced from 3 seconds to 1 second.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v TcpInitialRto /t REG_DWORD /d 1000 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v TcpInitialRto",
+      "default_value": "3000",
+      "optimized_value": "1000",
+      "risk_level": "low",
+      "profiles": ["aggressive"],
+      "requires_reboot": true,
+      "reversible": true
+    },
+    {
+      "id": "rsc",
+      "name": "Receive Segment Coalescing (RSC)",
+      "category": "network_adapter",
+      "description": "Combines multiple TCP segments into larger ones. Reduces CPU overhead.",
+      "command": "netsh int tcp set global rsc=enabled",
+      "verify_command": "netsh int tcp show global | findstr RSC",
+      "default_value": "enabled",
+      "optimized_value": "enabled",
+      "risk_level": "low",
+      "profiles": ["conservative", "balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "chimney_offload",
+      "name": "TCP Chimney Offload",
+      "category": "network_adapter",
+      "description": "Offloads TCP processing to NIC hardware. Can improve or hurt depending on NIC.",
+      "command": "netsh int tcp set global chimney=disabled",
+      "verify_command": "netsh int tcp show global | findstr Chimney",
+      "default_value": "automatic",
+      "optimized_value": "disabled",
+      "risk_level": "medium",
+      "profiles": ["aggressive"],
+      "requires_reboot": false,
+      "reversible": true,
+      "notes": "Disabled by default as many NICs have buggy implementations"
+    },
+    {
+      "id": "netdma",
+      "name": "NetDMA",
+      "category": "network_adapter",
+      "description": "Direct memory access for network data. Reduces CPU usage on supported hardware.",
+      "command": "netsh int tcp set global netdma=enabled",
+      "verify_command": "netsh int tcp show global | findstr NetDMA",
+      "default_value": "disabled",
+      "optimized_value": "enabled",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "dns_cache",
+      "name": "DNS Cache Optimization",
+      "category": "dns",
+      "description": "Increases local DNS cache size and TTL for faster repeated lookups.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\" /v MaxCacheEntryTtlLimit /t REG_DWORD /d 86400 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\" /v MaxCacheEntryTtlLimit",
+      "default_value": "86400",
+      "optimized_value": "86400",
+      "risk_level": "low",
+      "profiles": ["conservative", "balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    },
+    {
+      "id": "dns_negative_cache",
+      "name": "DNS Negative Cache TTL",
+      "category": "dns",
+      "description": "Reduces time to cache failed DNS lookups. Faster recovery from DNS issues.",
+      "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\" /v NegativeCacheTime /t REG_DWORD /d 5 /f",
+      "verify_command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\" /v NegativeCacheTime",
+      "default_value": "900",
+      "optimized_value": "5",
+      "risk_level": "low",
+      "profiles": ["balanced", "aggressive"],
+      "requires_reboot": false,
+      "reversible": true
+    }
+  ],
+  
+  "profiles": {
+    "conservative": {
+      "name": "Conservative",
+      "description": "Safe optimizations only. Minimal risk, moderate improvement.",
+      "icon": "🟢",
+      "tcp_window_kb": 64,
+      "rss_cpus": 2,
+      "recommended_for": ["Work computers", "Sensitive networks", "Testing"]
+    },
+    "balanced": {
+      "name": "Balanced",
+      "description": "Recommended for most users. Good improvement with low risk.",
+      "icon": "🟡",
+      "tcp_window_kb": 256,
+      "rss_cpus": 4,
+      "recommended_for": ["Home networks", "Gaming", "Streaming"]
+    },
+    "aggressive": {
+      "name": "Aggressive",
+      "description": "Maximum performance. All optimizations enabled.",
+      "icon": "🔴",
+      "tcp_window_kb": 16384,
+      "rss_cpus": "all",
+      "recommended_for": ["Power users", "High-bandwidth needs", "Servers"]
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "version": "2.2",
+  "description": "DNS server configurations for NetBoozt failover system",
+  
+  "tiers": [
+    {
+      "tier": 1,
+      "name": "Cloudflare",
+      "primary": "1.1.1.1",
+      "secondary": "1.0.0.1",
+      "description": "Fastest public DNS, privacy-focused",
+      "features": ["privacy", "speed", "doh", "dot"],
+      "website": "https://1.1.1.1"
+    },
+    {
+      "tier": 2,
+      "name": "Google",
+      "primary": "8.8.8.8",
+      "secondary": "8.8.4.4",
+      "description": "Most reliable, global infrastructure",
+      "features": ["reliability", "doh", "dot"],
+      "website": "https://dns.google"
+    },
+    {
+      "tier": 3,
+      "name": "Quad9",
+      "primary": "9.9.9.9",
+      "secondary": "149.112.112.112",
+      "description": "Security-focused, blocks malware domains",
+      "features": ["security", "malware-blocking", "doh", "dot"],
+      "website": "https://quad9.net"
+    },
+    {
+      "tier": 4,
+      "name": "OpenDNS",
+      "primary": "208.67.222.222",
+      "secondary": "208.67.220.220",
+      "description": "Cisco-backed, optional content filtering",
+      "features": ["filtering", "parental-controls"],
+      "website": "https://www.opendns.com"
+    },
+    {
+      "tier": 5,
+      "name": "AdGuard",
+      "primary": "94.140.14.14",
+      "secondary": "94.140.15.15",
+      "description": "Ad-blocking DNS, blocks trackers",
+      "features": ["ad-blocking", "privacy", "doh", "dot"],
+      "website": "https://adguard-dns.io"
+    },
+    {
+      "tier": 6,
+      "name": "CleanBrowsing",
+      "primary": "185.228.168.9",
+      "secondary": "185.228.169.9",
+      "description": "Family-friendly, blocks adult content",
+      "features": ["family-filter", "security"],
+      "website": "https://cleanbrowsing.org"
+    },
+    {
+      "tier": 7,
+      "name": "Router/DHCP",
+      "primary": "auto",
+      "secondary": null,
+      "description": "ISP DNS from router (fallback)",
+      "features": ["local-cache", "isp-fallback"]
+    }
+  ],
+  
+  "isp_dns": {
+    "description": "Known ISP DNS servers by provider (auto-detected)",
+    "providers": {
+      "Telmex": {
+        "primary": "200.33.146.217",
+        "secondary": "200.33.146.218"
+      },
+      "Totalplay": {
+        "primary": "189.203.0.2",
+        "secondary": "189.203.0.3"
+      },
+      "Izzi": {
+        "primary": "200.38.193.226",
+        "secondary": "200.38.193.227"
+      },
+      "Megacable": {
+        "primary": "200.34.128.1",
+        "secondary": "200.34.128.2"
+      },
+      "AT&T": {
+        "primary": "68.94.156.1",
+        "secondary": "68.94.157.1"
+      },
+      "Comcast": {
+        "primary": "75.75.75.75",
+        "secondary": "75.75.76.76"
+      },
+      "Verizon": {
+        "primary": "71.242.0.12",
+        "secondary": "71.252.0.12"
+      },
+      "Spectrum": {
+        "primary": "64.71.255.204",
+        "secondary": "64.71.255.198"
+      }
+    }
+  },
+  
+  "thresholds": {
+    "latency_excellent_ms": 20,
+    "latency_good_ms": 50,
+    "latency_fair_ms": 100,
+    "latency_poor_ms": 200,
+    "timeout_ms": 2000,
+    "max_failures_before_switch": 2,
+    "check_interval_seconds": 10,
+    "cooldown_seconds": 30
+  },
+  
+  "recommended_by_region": {
+    "mexico_latam": {
+      "primary": "1.1.1.1",
+      "secondary": "1.0.0.1",
+      "fallback": "auto",
+      "notes": "Cloudflare has good PoPs in Mexico City and Guadalajara"
+    },
+    "usa_canada": {
+      "primary": "1.1.1.1",
+      "secondary": "8.8.8.8",
+      "fallback": "auto",
+      "notes": "Both Cloudflare and Google have extensive US coverage"
+    },
+    "europe": {
+      "primary": "1.1.1.1",
+      "secondary": "9.9.9.9",
+      "fallback": "auto",
+      "notes": "Quad9 has strong European presence"
+    },
+    "asia_pacific": {
+      "primary": "8.8.8.8",
+      "secondary": "1.1.1.1",
+      "fallback": "auto",
+      "notes": "Google has better coverage in some Asian regions"
+    }
+  }
+}

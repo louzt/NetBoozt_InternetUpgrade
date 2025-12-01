@@ -36,17 +36,32 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs (ignore log files but keep directory)
 *.log
-logs/
+logs/*
+!logs/.gitkeep
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
 
+# NetBoozt Data (NO SUBIR DATOS LOCALES DEL USUARIO)
+%APPDATA%/NetBoozt/
+*.json
+!netboozt.spec
+# Archivos de DB local en cualquier directorio
+**/netboozt_data.json
+**/data.json
+AppData/
+
 # Personal config (no subir tu configuración personal)
 /network_failover.py
 /test_config.ps1
 /TROUBLESHOOTING.md
 /install_service.ps1
+
+# Directorio de notas del desarrollador (PRIVADO)
+dev_notes/
+!dev_notes/.gitignore
+!dev_notes/README.md

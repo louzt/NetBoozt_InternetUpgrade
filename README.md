@@ -6,12 +6,14 @@
 
 **Transform Your Internet Speed Without Changing Your ISP**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/louzt/NetBoozt_InternetUpgrade)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/louzt/NetBoozt_InternetUpgrade)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)]()
+[![Lines of Code](https://img.shields.io/badge/lines-9300%2B-green.svg)]()
 
-**Unlock BBR-like performance on Windows • Intelligent network failover • DNS fallback protection**
+**BBR-like performance • Auto DNS Failover • Smart Alerts • Network Backups • Advanced Monitoring**
 
 **English** | [Español](README.es.md)
 
@@ -86,20 +88,56 @@ Bring **Google's BBR-like performance** to Windows without kernel hacking:
 - ✅ **77% lower latency** during downloads (goodbye bufferbloat!)
 - ✅ **Smooth gaming** even while downloading (no more lag spikes)
 - ✅ **Stable video calls** with simultaneous uploads
+- ✅ **8 real optimizations** applied via PowerShell/Registry
 
-### 🔄 Intelligent Network Failover
+### 🔄 Intelligent Network Failover (NEW v2.1)
 **Never lose connection again:**
 - ✅ **Auto-switch** between Ethernet and WiFi when one fails
 - ✅ **Seamless handoff** (your Zoom call won't drop)
 - ✅ **Configurable priorities** (Ethernet first, WiFi backup)
 - ✅ **Toast notifications** when failover happens
 
-### 🌐 DNS Fallback Protection (7-Tier Shield)
-**ISP DNS down? You won't even notice:**
-- ✅ **Cloudflare 1.1.1.1** → **Google 8.8.8.8** → **Quad9** → ... → **Your router**
-- ✅ **Automatic failover** in milliseconds
-- ✅ **Faster DNS resolution** (often faster than ISP DNS)
+### 🌐 DNS Auto-Failover (7-Tier Shield + Health Checks)
+**ISP DNS down? Automatic tier switching in 15 seconds:**
+- ✅ **Real-time health monitoring** (ping every 15s)
+- ✅ **Automatic tier switching** on failure detection
+- ✅ **60-second cooldown** to prevent flapping
+- ✅ **7 DNS tiers**: Cloudflare → Google → Quad9 → OpenDNS → Adguard → CloudflareFamily → DHCP
+- ✅ **Windows notifications** on failover events
 - ✅ **No more "DNS server not responding" errors**
+
+### 🔔 Smart Alert System (NEW v2.1)
+**Proactive network monitoring:**
+- ✅ **Configurable thresholds** (latency, packet loss, speed)
+- ✅ **Real-time alerts** via Windows toast notifications
+- ✅ **Auto-resolution** when metrics return to normal
+- ✅ **Alert history** and statistics
+- ✅ **Cooldown periods** to prevent notification spam
+- ✅ **6 alert types**: Latency, Packet Loss, Speed, DNS, Adapter Errors, Memory
+
+### 💾 Configuration Backups (NEW v2.1)
+**Never lose your network config:**
+- ✅ **One-click snapshots** of DNS, IP, TCP, and Registry settings
+- ✅ **Instant restore** to any previous state
+- ✅ **Automatic cleanup** (keeps last 50 backups)
+- ✅ **JSON export/import** for configuration sharing
+- ✅ **Pre-backup before optimizations** (safety first)
+
+### 📊 Advanced Monitoring (NEW v2.1)
+**Professional-grade network analytics:**
+- ✅ **4 real-time graphs** (Download, Upload, Latency, Packet Loss)
+- ✅ **Temporal zoom** (5min, 15min, 30min, 1h, 6h, 24h, 7 days)
+- ✅ **Matplotlib integration** with dark theme
+- ✅ **Intelligent data storage** (3-2-1 strategy: 24h all, 7d hourly, 30d daily)
+- ✅ **Speed test history** with auto-cleanup
+
+### 🎨 Modern UI (NEW v2.1)
+**Beautiful, functional interface:**
+- ✅ **Dark/Light theme** toggle
+- ✅ **CustomTkinter** modern widgets
+- ✅ **Real-time updates** without blocking UI
+- ✅ **12 navigation tabs** (Dashboard, Optimizations, DNS, Graphs, Alerts, Backups, Settings...)
+- ✅ **Windows toast notifications** for all events
 
 ### 🎮 Real-World Use Cases
 
@@ -158,14 +196,17 @@ Bring **Google's BBR-like performance** to Windows without kernel hacking:
 | **HyStart++** | Fast slow-start algorithm | 📖 Details |
 | **TCP Fast Open** | Reduce connection latency | 📖 Details |
 
-### 🌐 Network Resilience
+### 🌐 Network Resilience & Monitoring
 
 | Feature | Description | Benefit |
-|---------|-------------|---------|
-| **Intelligent Failover** | Auto-switch Ethernet ↔ WiFi | Zero downtime on adapter failure |
-| **7-Tier DNS Fallback** | Cloudflare → Google → Quad9 → OpenDNS → ISP | Always-on internet, ISP-independent |
-| **Real-time Monitoring** | Network health dashboard | Detect ISP throttling, packet loss |
-| **Automatic Recovery** | Self-healing on failures | No manual intervention needed |
+|---------|-------------|---------|------|
+| **DNS Auto-Failover** | Health checks + automatic tier switching | ISP DNS down? Switches in 15s automatically |
+| **7-Tier DNS Fallback** | Cloudflare → Google → Quad9 → OpenDNS → Adguard → CF Family → DHCP | Always-on internet, ISP-independent |
+| **Real-time Monitoring** | 4 advanced graphs with temporal zoom | Detect ISP throttling, packet loss patterns |
+| **Alert System** | Configurable thresholds + notifications | Get notified before problems affect you |
+| **Configuration Backups** | One-click snapshots + restore | Rollback to any previous state instantly |
+| **Speed Test History** | Intelligent 3-2-1 storage strategy | Track performance over time efficiently |
+| **Dark/Light Theme** | Professional UI with theme toggle | Comfortable viewing day or night |
 
 [**📚 See all 15+ optimizations →**](docs/optimizations/)
 
@@ -219,23 +260,36 @@ Average: 520 Mbps (+15.5%) | Latency: 19ms (-77.6%)
 
 ## ⚡ Quick Start
 
-### Windows
+### Windows (Recommended)
 
 ```powershell
 # 1. Clone repository
 git clone https://github.com/louzt/NetBoozt_InternetUpgrade.git
-cd NetBoozt_InternetUpgrade
+cd NetBoozt_InternetUpgrade/windows
 
 # 2. Create virtual environment (use --copies if Avast/antivirus blocking)
 python -m venv venv --copies
 .\venv\Scripts\Activate.ps1
 
-# 3. Install dependencies
-pip install -r windows/requirements.txt
+# 3. Install dependencies (includes matplotlib for graphs)
+pip install -r requirements.txt
 
-# 4. Run GUI (as Administrator)
-python windows/run.py
+# 4. Install optional: winotify for Windows toast notifications
+pip install winotify
+
+# 5. Run GUI (as Administrator - REQUIRED)
+python run.py
 ```
+
+**First Time Usage:**
+1. Click **"🔄 Refresh Estado"** to detect current optimizations
+2. Review suggested optimizations (pre-selected based on your system)
+3. Click **"✅ Aplicar Optimizaciones"** (creates backup automatically)
+4. Enable **"Auto-Failover"** in DNS tab for automatic tier switching
+5. Configure **Alert thresholds** in Alerts tab
+6. Create your first **Backup** in Backups tab
+
+**All changes are 100% reversible** via Backups tab or "Revertir Todo" button.
 
 ### Linux (Coming Soon)
 

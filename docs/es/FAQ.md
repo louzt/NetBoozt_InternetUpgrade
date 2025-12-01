@@ -1,9 +1,9 @@
-# Preguntas Frecuentes (FAQ) - Español
+# Preguntas Frecuentes (FAQ) v2.1 - Español
 
 ## General
 
 ### ¿Qué es NetBoozt?
-NetBoozt es un kit de herramientas avanzado de optimización TCP/IP que trae rendimiento de nivel Linux (similar al control de congestión BBR de Google) a Windows. Es 100% open-source y reversible.
+NetBoozt es un kit de herramientas avanzado de optimización TCP/IP que trae rendimiento de nivel Linux (similar al control de congestión BBR de Google) a Windows. Incluye DNS Auto-Failover, sistema de alertas inteligente, backups de configuración y monitoreo avanzado. Es 100% open-source y reversible.
 
 ### ¿Es seguro?
 ¡Sí! NetBoozt:
@@ -12,6 +12,7 @@ NetBoozt es un kit de herramientas avanzado de optimización TCP/IP que trae ren
 - ✅ Solo modifica el registro de Windows (sin parches binarios)
 - ✅ No requiere drivers a nivel kernel
 - ✅ Open-source (Licencia MIT)
+- ✅ Sistema de backups integrado en v2.1
 
 ### ¿Por qué creaste este proyecto?
 
@@ -33,22 +34,61 @@ No. NetBoozt solo modifica configuraciones del registro de Windows que están of
 - Privilegios de administrador
 - Adaptador de red con soporte RSS (la mayoría de adaptadores modernos)
 
+## Nuevas Características (v2.1)
+
+### ¿Qué es el DNS Auto-Failover?
+Sistema automático que monitorea la salud de tu DNS cada 15 segundos y cambia automáticamente a un tier saludable si el actual falla. Incluye 7 tiers (Cloudflare, Google, Quad9, OpenDNS, Adguard, CloudflareFamily, DHCP).
+
+**Uso:**
+1. Ve a pestaña "Failover DNS"
+2. Activa switch "Auto-Failover"
+3. El sistema monitorea automáticamente
+4. Recibes notificaciones cuando cambia el tier
+
+### ¿Cómo funcionan las Alertas?
+Sistema proactivo que te notifica cuando métricas exceden umbrales configurables:
+- Latencia Alta (default: 100ms)
+- Pérdida de Paquetes Alta (default: 2%)
+- Velocidad Baja (default: 10 Mbps)
+- Falla DNS, Errores de Adaptador, Memoria Alta
+
+Las alertas se auto-resuelven cuando métricas vuelven a la normalidad.
+
+### ¿Para qué sirven los Backups?
+Permiten crear snapshots de toda tu configuración de red (DNS, IP, TCP, Registry) con un click. Puedes restaurar a cualquier estado previo instantáneamente.
+
+**Casos de uso:**
+- Antes de cambiar configuración de red
+- Antes de aplicar optimizaciones
+- Probar diferentes configuraciones
+- Compartir configuración entre PCs
+- Recuperación ante desastres
+
+### ¿Qué son las Gráficas Avanzadas?
+4 gráficas profesionales con matplotlib que muestran:
+- Velocidad de Descarga/Subida
+- Latencia
+- Pérdida de Paquetes
+
+Con zoom temporal de 5min a 7 días y almacenamiento inteligente 3-2-1.
+
 ## Rendimiento
 
 ### ¿Qué tan rápido será mi internet?
-Resultados típicos:
+Resultados típicos v2.1:
 - **Descarga**: +15-20% de mejora
 - **Subida**: +10-15% de mejora
-- **Latencia**: -12% a -30% de reducción
+- **Latencia**: -77% reducción (19ms vs 85ms con bufferbloat)
 - **Gaming**: Reducción de picos de lag
+- **Estabilidad**: Auto-failover previene caídas de DNS
 
 Los resultados varían según ISP, condiciones de red y hardware.
 
 ### ¿Necesito internet gigabit?
 ¡No! NetBoozt mejora el rendimiento en cualquier conexión:
-- **50 Mbps**: Mejor streaming, menos buffering
-- **100 Mbps**: Descargas más rápidas, menor latencia
-- **500+ Mbps**: Utilizar todo el ancho de banda, reducir overhead
+- **50 Mbps**: Mejor streaming, menos buffering, DNS más rápido
+- **100 Mbps**: Descargas más rápidas, menor latencia, alertas proactivas
+- **500+ Mbps**: Utilizar todo el ancho de banda, reducir overhead, monitoreo avanzado
 
 ### ¿Ayudará con gaming?
 ¡Sí! Beneficios:

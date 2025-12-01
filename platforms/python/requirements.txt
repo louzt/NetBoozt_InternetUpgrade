@@ -1,0 +1,38 @@
+# NetBoozt Python Dependencies
+# Version: 2.2.0
+# By LOUST (www.loust.pro)
+
+# GUI moderna con CustomTkinter (tema oscuro nativo)
+customtkinter>=5.2.0
+Pillow>=10.0.0
+
+# Gráficas en tiempo real
+matplotlib>=3.8.0
+
+# Monitoreo de sistema
+psutil>=5.9.0
+
+# Base de datos ligera (JSON puro, sin SQL)
+tinydb>=4.8.0
+
+# Notificaciones Windows
+winotify==1.1.0
+
+# System tray icon (NEW v2.2)
+pystray>=0.19.0
+
+# Logging mejorado
+colorlog==6.8.2
+
+# Para compilar a .exe
+pyinstaller>=6.0.0
+
+# Nuitka (recomendado - mejor rendimiento)
+nuitka>=1.8.0
+ordered-set>=4.1.0
+zstandard>=0.21.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+

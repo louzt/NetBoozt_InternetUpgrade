@@ -6,12 +6,14 @@
 
 **Transforma tu Velocidad de Internet Sin Cambiar de ISP**
 
-[![Versión](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/louzt/NetBoozt_InternetUpgrade)
+[![Versión](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/louzt/NetBoozt_InternetUpgrade)
 [![Licencia](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Plataforma](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20WSL-lightgrey.svg)]()
 [![PRs Bienvenidos](https://img.shields.io/badge/PRs-bienvenidos-brightgreen.svg)](CONTRIBUTING.md)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)]()
+[![Líneas de Código](https://img.shields.io/badge/l%C3%ADneas-9300%2B-green.svg)]()
 
-**Desbloquea rendimiento tipo BBR en Windows • Failover inteligente de red • Protección DNS de respaldo**
+**Rendimiento BBR • Auto-Failover DNS • Alertas Inteligentes • Backups de Red • Monitoreo Avanzado**
 
 [English](README.md) | **Español**
 
@@ -86,20 +88,56 @@ Trae **rendimiento tipo BBR de Google** a Windows sin hackear el kernel:
 - ✅ **77% menor latencia** durante descargas (¡adiós bufferbloat!)
 - ✅ **Gaming fluido** incluso descargando (sin picos de lag)
 - ✅ **Videollamadas estables** con uploads simultáneos
+- ✅ **8 optimizaciones reales** aplicadas vía PowerShell/Registry
 
-### 🔄 Failover Inteligente de Red
+### 🔄 Failover Inteligente de Red (NUEVO v2.1)
 **Nunca pierdas conexión de nuevo:**
 - ✅ **Auto-cambio** entre Ethernet y WiFi cuando uno falla
 - ✅ **Handoff sin interrupciones** (tu llamada de Zoom no se caerá)
 - ✅ **Prioridades configurables** (Ethernet primero, WiFi respaldo)
 - ✅ **Notificaciones toast** cuando ocurre failover
 
-### 🌐 Protección DNS de Respaldo (Escudo de 7 Niveles)
-**¿DNS del ISP caído? Ni lo notarás:**
-- ✅ **Cloudflare 1.1.1.1** → **Google 8.8.8.8** → **Quad9** → ... → **Tu router**
-- ✅ **Failover automático** en milisegundos
-- ✅ **Resolución DNS más rápida** (frecuentemente más rápido que DNS del ISP)
+### 🌐 DNS Auto-Failover (Escudo de 7 Niveles + Health Checks)
+**¿DNS del ISP caído? Cambio automático de tier en 15 segundos:**
+- ✅ **Monitoreo de salud en tiempo real** (ping cada 15s)
+- ✅ **Cambio automático de tier** al detectar falla
+- ✅ **Cooldown de 60 segundos** para prevenir flapping
+- ✅ **7 tiers DNS**: Cloudflare → Google → Quad9 → OpenDNS → Adguard → CloudflareFamily → DHCP
+- ✅ **Notificaciones de Windows** en eventos de failover
 - ✅ **No más errores "servidor DNS no responde"**
+
+### 🔔 Sistema de Alertas Inteligente (NUEVO v2.1)
+**Monitoreo proactivo de red:**
+- ✅ **Umbrales configurables** (latencia, pérdida de paquetes, velocidad)
+- ✅ **Alertas en tiempo real** vía notificaciones toast de Windows
+- ✅ **Auto-resolución** cuando métricas vuelven a la normalidad
+- ✅ **Historial de alertas** y estadísticas
+- ✅ **Períodos de cooldown** para prevenir spam de notificaciones
+- ✅ **6 tipos de alerta**: Latencia, Pérdida de Paquetes, Velocidad, DNS, Errores de Adaptador, Memoria
+
+### 💾 Backups de Configuración (NUEVO v2.1)
+**Nunca pierdas tu configuración de red:**
+- ✅ **Snapshots de un click** de configuración DNS, IP, TCP y Registry
+- ✅ **Restauración instantánea** a cualquier estado previo
+- ✅ **Limpieza automática** (mantiene los últimos 50 backups)
+- ✅ **Export/import JSON** para compartir configuraciones
+- ✅ **Pre-backup antes de optimizaciones** (seguridad primero)
+
+### 📊 Monitoreo Avanzado (NUEVO v2.1)
+**Analíticas de red de grado profesional:**
+- ✅ **4 gráficas en tiempo real** (Descarga, Subida, Latencia, Pérdida de Paquetes)
+- ✅ **Zoom temporal** (5min, 15min, 30min, 1h, 6h, 24h, 7 días)
+- ✅ **Integración con Matplotlib** con tema oscuro
+- ✅ **Almacenamiento inteligente de datos** (estrategia 3-2-1: 24h todo, 7d por hora, 30d diario)
+- ✅ **Historial de speed tests** con limpieza automática
+
+### 🎨 Interfaz Moderna (NUEVO v2.1)
+**Interfaz hermosa y funcional:**
+- ✅ **Toggle Dark/Light theme**
+- ✅ **Widgets modernos CustomTkinter**
+- ✅ **Actualizaciones en tiempo real** sin bloquear UI
+- ✅ **12 tabs de navegación** (Dashboard, Optimizaciones, DNS, Gráficas, Alertas, Backups, Configuración...)
+- ✅ **Notificaciones toast de Windows** para todos los eventos
 
 ### 🎮 Casos de Uso del Mundo Real
 
@@ -152,11 +190,23 @@ Trae **rendimiento tipo BBR de Google** a Windows sin hackear el kernel:
 
 | Característica | Descripción | Más Info |
 |----------------|-------------|----------|
-| **Control de Congestión TCP** | Algoritmo similar a BBR para mejor rendimiento | [📖 Detalles](docs/optimizations/bbr-vs-cubic.md) |
+| **Control de Congestión TCP** | Algoritmo similar a BBR para mejor rendimiento | [📖 Detalles](docs/optimizations/tcp-congestion-control.md) |
 | **Receive Side Scaling** | Procesamiento de paquetes multi-CPU | 📖 Detalles |
 | **TCP Autotuning** | Tamaño de búfer dinámico hasta 16MB | 📖 Detalles |
 | **HyStart++** | Algoritmo rápido de slow-start | 📖 Detalles |
 | **TCP Fast Open** | Reduce latencia de conexión | 📖 Detalles |
+
+### 🌐 Resiliencia de Red & Monitoreo
+
+| Característica | Descripción | Beneficio |
+|----------------|-------------|-----------|
+| **DNS Auto-Failover** | Health checks + cambio automático de tier | ¿DNS del ISP caído? Cambia en 15s automáticamente |
+| **Fallback DNS de 7 Tiers** | Cloudflare → Google → Quad9 → OpenDNS → Adguard → CF Family → DHCP | Internet siempre activo, independiente del ISP |
+| **Monitoreo en Tiempo Real** | 4 gráficas avanzadas con zoom temporal | Detecta throttling del ISP, patrones de pérdida de paquetes |
+| **Sistema de Alertas** | Umbrales configurables + notificaciones | Recibe notificación antes de que los problemas te afecten |
+| **Backups de Configuración** | Snapshots de un click + restauración | Vuelve a cualquier estado previo instantáneamente |
+| **Historial de Speed Tests** | Estrategia de almacenamiento inteligente 3-2-1 | Rastrea rendimiento a lo largo del tiempo eficientemente |
+| **Dark/Light Theme** | Interfaz profesional con toggle de tema | Visualización cómoda día o noche |
 
 [**📚 Ver las 15+ optimizaciones →**](docs/optimizations/)
 
@@ -210,23 +260,36 @@ Promedio: 520 Mbps (+15.5%) | Latencia: 19ms (-77.6%)
 
 ## ⚡ Inicio Rápido
 
-### Windows
+### Windows (Recomendado)
 
 ```powershell
 # 1. Clonar repositorio
 git clone https://github.com/louzt/NetBoozt_InternetUpgrade.git
-cd NetBoozt_InternetUpgrade
+cd NetBoozt_InternetUpgrade/windows
 
 # 2. Crear entorno virtual (usa --copies si Avast/antivirus bloquea)
 python -m venv venv --copies
 .\venv\Scripts\Activate.ps1
 
-# 3. Instalar dependencias
-pip install -r windows/requirements.txt
+# 3. Instalar dependencias (incluye matplotlib para gráficas)
+pip install -r requirements.txt
 
-# 4. Ejecutar GUI (como Administrador)
-python windows/run.py
+# 4. Instalar opcional: winotify para notificaciones toast de Windows
+pip install winotify
+
+# 5. Ejecutar GUI (como Administrador - REQUERIDO)
+python run.py
 ```
+
+**Uso por Primera Vez:**
+1. Click **"🔄 Refresh Estado"** para detectar optimizaciones actuales
+2. Revisa optimizaciones sugeridas (pre-seleccionadas según tu sistema)
+3. Click **"✅ Aplicar Optimizaciones"** (crea backup automáticamente)
+4. Habilita **"Auto-Failover"** en tab DNS para cambio automático de tier
+5. Configura **umbrales de Alertas** en tab Alertas
+6. Crea tu primer **Backup** en tab Backups
+
+**Todos los cambios son 100% reversibles** vía tab Backups o botón "Revertir Todo".
 
 ### Linux (Próximamente)
 
@@ -248,7 +311,8 @@ sudo python linux/netboozt.py --profile balanced
 
 ### 📚 Primeros Pasos
 - [⚙️ Guía de Instalación](docs/INSTALL.md)
-- [🚀 Tutorial de Inicio Rápido](docs/QUICKSTART.md)
+- [🆕 Novedades v2.1](docs/WHATS_NEW_V2.1.md)
+- [📝 Registro de Cambios](docs/CHANGELOG.md) | [📝 Español](CHANGELOG.md)
 - [❓ FAQ (Español)](docs/es/FAQ.md)
 - [❓ FAQ (English)](docs/FAQ.md)
 
@@ -258,8 +322,12 @@ sudo python linux/netboozt.py --profile balanced
 - [🆚 BBR vs CUBIC (Español)](docs/es/bbr-vs-cubic.md)
 - [🆚 BBR vs CUBIC (English)](docs/optimizations/bbr-vs-cubic.md)
 - [⚡ Receive Side Scaling](docs/optimizations/rss.md)
+- [🔄 TCP Window Scaling](docs/optimizations/tcp-window-scaling.md)
 
 ### 🏗️ Documentación Técnica
+- [📐 Diagramas de Arquitectura](docs/diagrams/)
+- [🔌 Referencia de API](docs/API.md)
+- [🧪 Guía de Pruebas](docs/TESTING.md)
 - [📐 Diagramas de Arquitectura](docs/diagrams/)
 - [🔌 Referencia de API](docs/API.md)
 - [🧪 Guía de Testing](docs/TESTING.md)
