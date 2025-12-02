@@ -57,7 +57,6 @@ speedtest_results_*.json
 network_failover.log
 
 # Development tools (NOT for end users - gitignored)
-# These are internal dev scripts, not part of open-source distribution
 tools/                      # Dev scripts (screenshot gen, favicon gen, etc.)
 docs/assets/screenshots/    # Auto-generated screenshots (upload to VPS instead)
 playwright/                 # Browser automation cache
@@ -69,3 +68,51 @@ playwright/                 # Browser automation cache
 # Temporary files
 *.tmp
 temp/
+
+# ============ TAURI / RUST ============
+# Rust build artifacts
+platforms/tauri/src-tauri/target/
+target/
+Cargo.lock
+*.rlib
+*.rmeta
+**/*.rs.bk
+*.pdb
+
+# Nuitka crash reports
+nuitka-crash-report.xml
+
+# ============ NODE.JS / SVELTEKIT ============
+node_modules/
+.svelte-kit/
+.env
+.env.*
+!.env.example
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# SvelteKit build
+platforms/tauri/build/
+platforms/tauri/.svelte-kit/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# ============ TAURI SPECIFIC ============
+# Tauri build outputs
+platforms/tauri/src-tauri/WixTools/
+platforms/tauri/src-tauri/*.exe
+platforms/tauri/src-tauri/*.msi
+platforms/tauri/src-tauri/*.dmg
+platforms/tauri/src-tauri/*.AppImage
+platforms/tauri/src-tauri/*.deb
+
+# Tauri debug symbols
+*.dSYM/
+
+# ============ WINDOWS BUILD ============
+windows/build/
+windows/$null
+*.spec
