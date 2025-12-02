@@ -1,7 +1,7 @@
 <!-- NetBoozt Dashboard Component -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { invoke } from '@tauri-apps/api/tauri';
+  import { invoke } from '$lib/tauri-bridge';
   
   interface NetworkAdapter {
     name: string;
