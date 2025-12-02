@@ -100,14 +100,27 @@ class ModernNetBoozt(ctk.CTk):
         self._dashboard_update_id = None
         self._dashboard_active = False
         
-        # Crear interfaz
+        # Crear interfaz (rápido)
         self.setup_ui()
         
+        # Detectar estado y monitoreo en background para inicio más rápido
+        self.after(100, self._deferred_init)
+    
+    def _deferred_init(self):
+        """Inicialización diferida para que la ventana aparezca rápido."""
         # Detectar estado actual de optimizaciones
-        self.detect_current_state()
+        threading.Thread(target=self._detect_state_background, daemon=True).start()
         
         # Iniciar monitor de red
         self.start_network_monitoring()
+    
+    def _detect_state_background(self):
+        """Detectar estado de optimizaciones en background thread."""
+        try:
+            self.detect_current_state()
+        except Exception as e:
+            if log_error:
+                log_error(f"Error en detección background: {e}")
     
     def start_network_monitoring(self):
         """Iniciar monitoreo de red en tiempo real"""

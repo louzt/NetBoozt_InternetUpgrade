@@ -166,13 +166,7 @@ if __name__ == "__main__":
             log_info("Splash screen created")
             
             # Actualizar splash con progreso simulado
-            splash.update_status("Cargando módulos...", 0.3)
-            splash.update()
-            
-            splash.update_status("Inicializando interfaz...", 0.6)
-            splash.update()
-            
-            splash.update_status("✓ Listo", 1.0)
+            splash.update_status("Cargando módulos...", 0.5)
             splash.update()
             
             # Función para cerrar splash y mostrar app
@@ -180,6 +174,9 @@ if __name__ == "__main__":
                 global _system_tray
                 
                 try:
+                    splash.update_status("✓ Listo", 1.0)
+                    splash.update()
+                    
                     # Destruir splash y root
                     splash.destroy()
                     root.destroy()
@@ -246,7 +243,8 @@ if __name__ == "__main__":
                     sys.exit(1)
             
             # Programar cierre de splash y apertura de app principal
-            splash.after(800, show_main_app)
+            # Reducido de 800ms a 400ms para inicio más rápido
+            splash.after(400, show_main_app)
             
             # Ejecutar splash mainloop (bloquea hasta que se cierre)
             log_info("Running splash mainloop...")
