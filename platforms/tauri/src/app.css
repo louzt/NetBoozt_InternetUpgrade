@@ -1,0 +1,105 @@
+/* Global styles for NetBoozt */
+
+:root {
+	--bg-main: #0a0a0a;
+	--bg-card: #1a1a1a;
+	--bg-elevated: #2b2b2b;
+	--primary: #00d4aa;
+	--primary-hover: #00b894;
+	--text-primary: #ffffff;
+	--text-secondary: #a0a0a0;
+	--text-muted: #666666;
+	--error: #ff4444;
+	--warning: #ffaa00;
+	--success: #00d4aa;
+	--border: #333333;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html, body {
+	height: 100%;
+	font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+	background: var(--bg-main);
+	color: var(--text-primary);
+	overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-card);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--bg-elevated);
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #444;
+}
+
+/* Button base styles */
+button {
+	font-family: inherit;
+	cursor: pointer;
+	border: none;
+	border-radius: 8px;
+	padding: 0.75rem 1.25rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Link styles */
+a {
+	color: var(--primary);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+/* Utility classes */
+.text-primary { color: var(--primary); }
+.text-error { color: var(--error); }
+.text-warning { color: var(--warning); }
+.text-success { color: var(--success); }
+.text-muted { color: var(--text-muted); }
+
+.bg-card { background: var(--bg-card); }
+.bg-elevated { background: var(--bg-elevated); }
+
+/* Animation */
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+	animation: pulse 2s ease-in-out infinite;
+}
