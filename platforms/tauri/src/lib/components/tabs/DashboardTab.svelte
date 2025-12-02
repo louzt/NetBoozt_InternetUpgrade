@@ -362,12 +362,25 @@
         const val = (tcpSettings as any)[key];
         if (val === null || val === undefined) return 'N/A';
         if (key === 'initial_rto' && typeof val === 'number') return `${val}ms`;
+        
+        // Para congestion_provider, mostrar algo más útil
+        if (key === 'congestion_provider') {
+            const v = String(val).toLowerCase();
+            if (v === 'default' || v === 'unknown' || v === '' || v === 'none') {
+                return 'CUBIC (default)';
+            }
+            // Si es NewReno u otro algoritmo, mostrarlo
+            return String(val);
+        }
+        
         return String(val);
     }
     
     function isEnabled(key: string): boolean {
         const val = getTcpValue(key).toLowerCase();
-        return val.includes('enabled') || val === 'normal' || val === 'experimental' || val === 'always' || val === 'cubic';
+        return val.includes('enabled') || val === 'normal' || val === 'experimental' || 
+               val === 'always' || val.includes('cubic') || val.includes('newreno') ||
+               val.includes('bbr');
     }
     
     function showTooltip(key: string) { activeTooltip = key; }

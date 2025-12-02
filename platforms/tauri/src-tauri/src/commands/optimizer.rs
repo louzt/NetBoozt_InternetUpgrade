@@ -211,7 +211,7 @@ pub fn get_current_settings_internal() -> Result<TcpSettings, String> {
         prr,
         pacing,
         initial_rto,
-        rack: "N/A".to_string(), // RACK no aparece en netsh por defecto
+        rack: "via PRR".to_string(), // RACK-TLP se maneja junto con PRR en Windows
     })
 }
 

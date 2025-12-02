@@ -185,7 +185,7 @@
         
         loading = true;
         try {
-            await invoke('set_dns', { 
+            await invoke('set_dns_servers', { 
                 adapter, 
                 primary: provider.primary, 
                 secondary: provider.secondary 
@@ -204,7 +204,7 @@
         if (!adapter) return;
         loading = true;
         try {
-            await invoke('reset_dns', { adapter });
+            await invoke('reset_dns_to_dhcp', { adapter });
             await loadCurrentDNS();
             dispatch('change', { dns: [], dhcp: true });
         } catch (e) {
@@ -320,17 +320,20 @@
             <div class="dns-grid">
                 {#each availableDNS as dns}
                     {@const inUse = isDNSInUse(dns.primary)}
+                    {@const providerLatency = latencies[dns.primary]}
                     <button 
                         class="dns-option" 
                         class:in-use={inUse}
-                        disabled={loading || inUse}
+                        class:has-latency={providerLatency?.ms > 0}
+                        disabled={loading}
                         on:click={() => setDNS(dns.id)}
+                        title="{dns.name} - {dns.primary} / {dns.secondary}{providerLatency?.ms ? ` (${providerLatency.ms}ms)` : ''}"
                     >
                         <span class="option-icon">{dns.icon}</span>
                         <span class="option-name">{dns.name}</span>
                         <span class="option-tier">T{dns.tier}</span>
                         {#if inUse}
-                            <Icon name="check" size={12} className="in-use-check" />
+                            <span class="in-use-badge">✓ Activo</span>
                         {/if}
                     </button>
                 {/each}
@@ -339,11 +342,11 @@
         
         <!-- Acciones -->
         <div class="dns-actions">
-            <button class="btn btn-ghost" on:click={resetTodhcp} disabled={loading || isDHCP}>
-                <Icon name="refresh-cw" size={14} />
-                DHCP
+            <button class="btn btn-ghost" on:click={resetTodhcp} disabled={loading || isDHCP} title="Resetear DNS a automático (DHCP)">
+                <Icon name="rotate-ccw" size={14} />
+                Automático
             </button>
-            <button class="btn btn-ghost" on:click={flushCache} disabled={loading}>
+            <button class="btn btn-ghost" on:click={flushCache} disabled={loading} title="Limpiar caché DNS del sistema">
                 <Icon name="trash-2" size={14} />
                 Limpiar Caché
             </button>
@@ -671,6 +674,22 @@
     .dns-option.in-use {
         border-color: var(--primary, #00d4aa);
         background: rgba(0, 212, 170, 0.15);
+    }
+    
+    .dns-option.in-use:hover:not(:disabled) {
+        background: rgba(0, 212, 170, 0.2);
+    }
+    
+    .in-use-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 0.5rem;
+        padding: 0.1rem 0.25rem;
+        background: var(--primary, #00d4aa);
+        color: #000;
+        border-radius: 3px;
+        font-weight: 700;
     }
     
     .option-icon {

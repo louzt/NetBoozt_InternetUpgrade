@@ -181,14 +181,17 @@
         </text>
         
         <!-- Línea del gráfico -->
-        <path 
-            d={path} 
-            fill="none" 
-            stroke={color} 
-            stroke-width="2.5" 
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        />
+        {#if path}
+            <path 
+                d={path} 
+                fill="none" 
+                stroke={color} 
+                stroke-width="3" 
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="chart-line"
+            />
+        {/if}
         
         <!-- Markers de eventos -->
         {#if algorithm === 'cubic' && animationProgress > 0.25}
@@ -244,6 +247,10 @@
     
     svg {
         display: block;
+    }
+    
+    .chart-line {
+        filter: drop-shadow(0 0 4px currentColor);
     }
     
     .event-marker {
