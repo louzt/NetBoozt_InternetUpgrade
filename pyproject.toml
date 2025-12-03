@@ -3,7 +3,7 @@
 
 [project]
 name = "NetBoozt"
-version = "1.0.0"
+version = "2.2.0"
 description = "Advanced TCP/IP Network Optimization Toolkit for Windows & Linux"
 authors = ["LOUST <www.loust.pro>"]
 license = "MIT"
