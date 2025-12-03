@@ -6,105 +6,69 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  test-windows:
+  # ============================================
+  # Tauri Build (Production - Windows Only)
+  # ============================================
+  build-tauri:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: platforms/tauri/package-lock.json
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r windows/requirements.txt
-        pip install -r requirements-dev.txt
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
     
-    - name: Lint with flake8
-      run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 windows/src --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 windows/src --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: platforms/tauri/src-tauri -> target
     
-    - name: Format check with black
-      run: |
-        black --check windows/src
+    - name: Install frontend dependencies
+      working-directory: platforms/tauri
+      run: npm ci
     
-    - name: Import sorting check
-      run: |
-        isort --check-only windows/src
+    - name: Check Rust formatting
+      working-directory: platforms/tauri/src-tauri
+      run: cargo fmt --check
     
-    - name: Type check with mypy
-      run: |
-        mypy windows/src --ignore-missing-imports
+    - name: Rust linting
+      working-directory: platforms/tauri/src-tauri
+      run: cargo clippy -- -D warnings
       continue-on-error: true
     
-    - name: Run tests
-      run: |
-        pytest windows/tests/ --cov=windows/src --cov-report=xml --cov-report=html
+    - name: Build Tauri app
+      working-directory: platforms/tauri
+      run: npm run tauri build
     
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - name: Upload MSI artifact
+      uses: actions/upload-artifact@v4
       with:
-        file: ./coverage.xml
-        flags: windows
-        name: windows-${{ matrix.python-version }}
+        name: netboozt-msi
+        path: platforms/tauri/src-tauri/target/release/bundle/msi/*.msi
+    
+    - name: Upload NSIS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: netboozt-setup
+        path: platforms/tauri/src-tauri/target/release/bundle/nsis/*.exe
 
-  test-linux:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r linux/requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Lint with flake8
-      run: |
-        flake8 linux/src --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 linux/src --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
-    
-    - name: Format check with black
-      run: |
-        black --check linux/src
-    
-    - name: Import sorting check
-      run: |
-        isort --check-only linux/src
-    
-    - name: Run tests
-      run: |
-        pytest linux/tests/ --cov=linux/src --cov-report=xml --cov-report=html
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: linux
-        name: linux-${{ matrix.python-version }}
-
-  build:
-    needs: [test-windows, test-linux]
-    runs-on: ubuntu-latest
+  # ============================================
+  # Python Legacy (Optional - for backwards compat)
+  # ============================================
+  lint-python-legacy:
+    runs-on: windows-latest
+    if: ${{ github.event_name == 'pull_request' }}
     
     steps:
     - uses: actions/checkout@v4
@@ -114,21 +78,25 @@ jobs:
       with:
         python-version: "3.11"
     
-    - name: Install build dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine
+        pip install flake8 black isort
     
-    - name: Build package
+    - name: Check if Python source exists
+      id: check-python
       run: |
-        python -m build
+        if (Test-Path "windows/src") { echo "exists=true" >> $env:GITHUB_OUTPUT } else { echo "exists=false" >> $env:GITHUB_OUTPUT }
+      shell: pwsh
     
-    - name: Check package
+    - name: Lint with flake8
+      if: steps.check-python.outputs.exists == 'true'
       run: |
-        twine check dist/*
+        flake8 windows/src --count --select=E9,F63,F7,F82 --show-source --statistics
+      continue-on-error: true
     
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist-packages
-        path: dist/
+    - name: Format check with black
+      if: steps.check-python.outputs.exists == 'true'
+      run: |
+        black --check windows/src
+      continue-on-error: true
