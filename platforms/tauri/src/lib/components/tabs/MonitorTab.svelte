@@ -35,12 +35,12 @@
                     <SkeletonCard variant="stat" />
                 {/each}
             {:else}
-                <StatCard icon="📥" label="Descarga" value={downloadRate.toFixed(2)} unit="Mbps" variant="primary" />
-                <StatCard icon="📤" label="Subida" value={uploadRate.toFixed(2)} unit="Mbps" variant="success" />
-                <StatCard icon="🏓" label="Latencia" value={latency.toFixed(0)} unit="ms" variant={latency > 100 ? 'warning' : 'default'} />
-                <StatCard icon="📦" label="Paquetes/s" value={(packetsSent + packetsRecv).toFixed(0)} unit="" />
-                <StatCard icon="⚠️" label="Errores" value={totalErrors.toString()} variant={totalErrors > 0 ? 'error' : 'default'} />
-                <StatCard icon="❌" label="Drops" value={totalDrops.toString()} variant={totalDrops > 0 ? 'warning' : 'default'} />
+                <StatCard icon="arrow-down" label="Descarga" value={downloadRate.toFixed(2)} unit="Mbps" variant="primary" />
+                <StatCard icon="arrow-up" label="Subida" value={uploadRate.toFixed(2)} unit="Mbps" variant="success" />
+                <StatCard icon="activity" label="Latencia" value={latency.toFixed(0)} unit="ms" variant={latency > 100 ? 'warning' : 'default'} />
+                <StatCard icon="layers" label="Paquetes/s" value={(packetsSent + packetsRecv).toFixed(0)} unit="" />
+                <StatCard icon="alert-triangle" label="Errores" value={totalErrors.toString()} variant={totalErrors > 0 ? 'error' : 'default'} />
+                <StatCard icon="x-circle" label="Drops" value={totalDrops.toString()} variant={totalDrops > 0 ? 'warning' : 'default'} />
             {/if}
         </div>
         

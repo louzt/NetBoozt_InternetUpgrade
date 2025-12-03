@@ -9,6 +9,7 @@
     import DiagnosticChain from '../DiagnosticChain.svelte';
     import DiagnosticHistory from '../DiagnosticHistory.svelte';
     import AlgorithmChart from '../AlgorithmChart.svelte';
+    import MiniRealtimeChart from '../MiniRealtimeChart.svelte';
     import SkeletonCard from '../SkeletonCard.svelte';
     import SpeedTestCard from '../SpeedTestCard.svelte';
     import OptimizationProfiles from '../OptimizationProfiles.svelte';
@@ -27,10 +28,40 @@
     export let latency = 0;
     export let uptime = 0;
     
+    // Métricas adicionales de red (antes en MonitorTab)
+    export let packetsSent = 0;
+    export let packetsRecv = 0;
+    export let totalErrors = 0;
+    export let totalDrops = 0;
+    export let monitoringActive = false;
+    
     const dispatch = createEventDispatcher();
     
     // Detectar si estamos en Tauri o web
     let isTauri = false;
+    
+    // Datos históricos para gráficas en tiempo real (últimos 30 segundos)
+    let downloadHistory: number[] = [];
+    let uploadHistory: number[] = [];
+    let latencyHistory: number[] = [];
+    const MAX_HISTORY_POINTS = 30;
+    
+    // Actualizar historial cuando cambian los valores
+    $: {
+        if (downloadRate !== undefined) {
+            downloadHistory = [...downloadHistory, downloadRate].slice(-MAX_HISTORY_POINTS);
+        }
+    }
+    $: {
+        if (uploadRate !== undefined) {
+            uploadHistory = [...uploadHistory, uploadRate].slice(-MAX_HISTORY_POINTS);
+        }
+    }
+    $: {
+        if (latency !== undefined && latency > 0) {
+            latencyHistory = [...latencyHistory, latency].slice(-MAX_HISTORY_POINTS);
+        }
+    }
     
     // Estado del protocolo y DNS
     let tcpSettings: TcpSettings | null = null;
@@ -48,7 +79,7 @@
     let dryRunMode = false;
     
     // DNS state
-    let autoFailoverEnabled = false;
+    let autoFailoverEnabled = true; // Habilitado por defecto para mejor experiencia
     
     // Tooltip activo
     let activeTooltip: string | null = null;
@@ -392,7 +423,7 @@
     }
     
     // Toggle para mostrar/ocultar gráficas de algoritmos
-    let showAlgorithmCharts = false;
+    let showAlgorithmCharts = true;
     
     // Manejar evento de diagnóstico completado para guardar en historial
     function handleDiagnosticComplete(result: any) {
@@ -448,51 +479,131 @@
         handleDiagnosticComplete(result);
     }
     
+    // Abrir el Administrador de Dispositivos de Windows
+    async function openDeviceManager() {
+        try {
+            if (isTauriAvailable()) {
+                // Usar comando de Tauri para abrir devmgmt.msc
+                await invoke('open_device_manager');
+            } else {
+                // En modo web, mostrar información
+                dispatch('showNotification', { 
+                    type: 'info', 
+                    message: '💻 En modo escritorio, esto abrirá el Administrador de Dispositivos de Windows (devmgmt.msc)' 
+                });
+            }
+        } catch (e) {
+            console.error('Error abriendo Device Manager:', e);
+            dispatch('showNotification', { 
+                type: 'warning', 
+                message: 'No se pudo abrir el Administrador de Dispositivos. Ejecuta "devmgmt.msc" manualmente.' 
+            });
+        }
+    }
+    
     $: if (selectedAdapter) { loadProtocolInfo(); }
 </script>
 
 <div class="dashboard">
-    <!-- Métricas en Tiempo Real + Speed Test -->
-    <div class="metrics-section">
-        <!-- Tráfico en Vivo -->
-        <section class="card live-traffic">
-            <div class="card-header">
-                <h2>📊 Tráfico en Vivo</h2>
-                <span class="live-indicator">
-                    <span class="pulse-dot"></span>
-                    Monitoreando
+    <!-- Fila 1: Métricas en tiempo real con gráficas -->
+    <section class="realtime-metrics-section">
+        <div class="metrics-header">
+            <div class="metrics-title">
+                <Icon name="activity" size={16} />
+                <h3>Monitoreo en Tiempo Real</h3>
+                <span class="monitoring-status" class:active={monitoringActive}>
+                    {monitoringActive ? '● Activo' : '○ Detenido'}
                 </span>
             </div>
-            <div class="stats-grid">
-                {#if loading}
-                    {#each [1,2,3,4] as _}
-                        <SkeletonCard variant="stat" />
-                    {/each}
-                {:else}
-                    <StatCard icon="📥" label="Descarga" value={downloadRate.toFixed(2)} unit="Mbps" variant="primary" />
-                    <StatCard icon="📤" label="Subida" value={uploadRate.toFixed(2)} unit="Mbps" variant="success" />
-                    <StatCard icon="🏓" label="Latencia" value={latency.toFixed(0)} unit="ms" variant={latency > 100 ? 'warning' : 'default'} />
-                    <StatCard icon="⏱️" label="Uptime" value={formatUptime(uptime)} variant="default" />
-                {/if}
-            </div>
-            <p class="traffic-hint">
-                💡 Estas son las métricas de tráfico actual. Para medir tu velocidad máxima, usa el Speed Test.
-            </p>
-        </section>
+            <button 
+                class="monitoring-toggle-btn" 
+                class:active={monitoringActive}
+                on:click={() => dispatch('toggleMonitoring')}
+                title={monitoringActive ? 'Detener monitoreo' : 'Iniciar monitoreo'}
+            >
+                <Icon name={monitoringActive ? 'pause' : 'play'} size={14} />
+                {monitoringActive ? 'Detener' : 'Iniciar'}
+            </button>
+        </div>
+        <div class="realtime-metrics-grid">
+            {#if loading}
+                {#each [1,2,3] as _}
+                    <SkeletonCard variant="stat" />
+                {/each}
+            {:else}
+                <MiniRealtimeChart 
+                    title="Descarga" 
+                    unit="Mbps" 
+                    icon="arrow-down"
+                    color="#00d4aa"
+                    data={downloadHistory}
+                    currentValue={downloadRate}
+                    maxPoints={MAX_HISTORY_POINTS}
+                />
+                <MiniRealtimeChart 
+                    title="Subida" 
+                    unit="Mbps" 
+                    icon="arrow-up"
+                    color="#9C27B0"
+                    data={uploadHistory}
+                    currentValue={uploadRate}
+                    maxPoints={MAX_HISTORY_POINTS}
+                />
+                <MiniRealtimeChart 
+                    title="Latencia" 
+                    unit="ms" 
+                    icon="activity"
+                    color="#FFC107"
+                    data={latencyHistory}
+                    currentValue={latency}
+                    maxPoints={MAX_HISTORY_POINTS}
+                />
+            {/if}
+        </div>
         
-        <!-- Speed Test -->
-        <section class="card speedtest-section">
-            <SpeedTestCard 
-                on:complete={(e) => {
-                    speedTestResult = e.detail;
-                    // Integrar con diagnóstico
-                    dispatch('speedTestComplete', e.detail);
-                }}
-            />
-        </section>
-    </div>
+        <!-- Métricas adicionales: Paquetes, Errores, Drops -->
+        <div class="packet-metrics-bar">
+            <div class="packet-metric" title="Paquetes enviados por segundo">
+                <Icon name="arrow-up-circle" size={14} />
+                <span class="metric-label">TX</span>
+                <span class="metric-value">{packetsSent.toLocaleString()}</span>
+                <span class="metric-unit">pkt/s</span>
+            </div>
+            <div class="packet-metric" title="Paquetes recibidos por segundo">
+                <Icon name="arrow-down-circle" size={14} />
+                <span class="metric-label">RX</span>
+                <span class="metric-value">{packetsRecv.toLocaleString()}</span>
+                <span class="metric-unit">pkt/s</span>
+            </div>
+            <div class="packet-metric" class:warning={totalErrors > 0} title="Errores totales de red">
+                <Icon name="alert-triangle" size={14} />
+                <span class="metric-label">Errores</span>
+                <span class="metric-value" class:error={totalErrors > 0}>{totalErrors}</span>
+            </div>
+            <div class="packet-metric" class:warning={totalDrops > 0} title="Paquetes descartados">
+                <Icon name="x-circle" size={14} />
+                <span class="metric-label">Drops</span>
+                <span class="metric-value" class:error={totalDrops > 0}>{totalDrops}</span>
+            </div>
+        </div>
+        
+        <div class="uptime-bar">
+            <Icon name="clock" size={12} />
+            <span>Uptime: <strong>{formatUptime(uptime)}</strong></span>
+        </div>
+    </section>
     
-    <!-- Quick Optimization Profiles -->
+    <!-- Fila 2: Speed Test -->
+    <section class="speedtest-row">
+        <SpeedTestCard 
+            on:complete={(e) => {
+                speedTestResult = e.detail;
+                dispatch('speedTestComplete', e.detail);
+            }}
+        />
+    </section>
+    
+    <!-- Fila 3: Quick Optimization Profiles -->
     <section class="quick-optimization">
         <OptimizationProfiles 
             loading={loadingProtocol}
@@ -508,7 +619,7 @@
         />
     </section>
     
-    <!-- Protocol Status & DNS Summary -->
+    <!-- Fila 4: Protocol Status & DNS Summary (2 columnas) -->
     <div class="info-grid">
         <!-- TCP Protocol Status -->
         <section class="card protocol-card">
@@ -651,10 +762,10 @@
                 compact={false}
                 autoFailoverEnabled={autoFailoverEnabled}
                 on:change={handleDNSChange}
-                on:error={(e) => dispatch('showNotification', { type: 'error', message: e.detail })}
+                on:error={e => dispatch('showNotification', { type: 'error', message: e.detail })}
                 on:flush={() => dispatch('showNotification', { type: 'success', message: 'Caché DNS limpiada' })}
                 on:toggleFailover={() => { autoFailoverEnabled = !autoFailoverEnabled; }}
-                on:detectFailover={(e) => { 
+                on:detectFailover={e => { 
                     autoFailoverEnabled = e.detail.enabled;
                     dispatch('showNotification', { 
                         type: 'info', 
@@ -667,8 +778,18 @@
     </div>
     
     <!-- Adapters -->
-    <section class="card">
-        <h2>📡 Adaptadores de Red</h2>
+    <section class="card adapters-section">
+        <div class="card-header">
+            <h2>📡 Adaptadores de Red</h2>
+            <button 
+                class="icon-btn-device" 
+                on:click={openDeviceManager}
+                title="Abrir Administrador de Dispositivos de Windows"
+            >
+                <Icon name="external-link" size={12} />
+                <span>Abrir en Windows</span>
+            </button>
+        </div>
         {#if loading}
             <div class="adapter-grid">
                 {#each [1,2] as _}
@@ -678,60 +799,291 @@
         {:else if adapters.length === 0}
             <p class="empty-state">No se encontraron adaptadores activos</p>
         {:else}
-            <div class="adapter-grid">
-                {#each adapters as adapter}
-                    <div class="adapter-card" class:selected={adapter.name === selectedAdapter}>
+            <div class="adapter-grid" style="--adapter-count: {Math.min(adapters.length, 4)}">
+                {#each adapters as adapter, index}
+                    {@const isSelected = adapter.name === selectedAdapter}
+                    {@const isEthernet = adapter.name.toLowerCase().includes('ethernet') || adapter.description.toLowerCase().includes('realtek') || adapter.description.toLowerCase().includes('intel')}
+                    {@const isPrimary = index === 0}
+                    {@const isFallback = index > 0}
+                    <div class="adapter-card" class:selected={isSelected} class:ethernet={isEthernet} class:primary={isPrimary} class:fallback={isFallback}>
                         <div class="adapter-header">
-                            <h3>{safeValue(adapter.name, 'Adaptador')}</h3>
-                            <span class="status-badge up">Up</span>
+                            <div class="adapter-title">
+                                <span class="adapter-icon">{isEthernet ? '🔌' : '📶'}</span>
+                                <h3>{safeValue(adapter.name, 'Adaptador')}</h3>
+                            </div>
+                            <div class="adapter-badges">
+                                {#if isPrimary}
+                                    <span class="priority-badge primary" title="Adaptador principal - Usado para optimizaciones DNS y TCP">
+                                        <Icon name="zap" size={10} />
+                                        Primario
+                                    </span>
+                                {:else}
+                                    <span class="priority-badge fallback" title="Respaldo automático si el primario falla">
+                                        <Icon name="shield" size={10} />
+                                        Fallback
+                                    </span>
+                                {/if}
+                                {#if isSelected}
+                                    <span class="status-badge selected" title="Adaptador activo para DNS Intelligence">🧠 DNS</span>
+                                {/if}
+                                <span class="status-badge up">Up</span>
+                            </div>
                         </div>
                         <p class="adapter-desc">{safeValue(adapter.description, 'Sin descripción')}</p>
                         <div class="adapter-stats">
-                            <span>🔗 {safeValue(adapter.link_speed, 'N/A')}</span>
-                            <span>🆔 {safeValue(adapter.mac_address, 'N/A')}</span>
+                            <span title="Velocidad de enlace">🔗 {safeValue(adapter.link_speed, 'N/A')}</span>
+                            <span title="Dirección MAC (parcial)">🆔 {safeValue(adapter.mac_address?.substring(0, 8) + '...', 'N/A')}</span>
                         </div>
+                        
+                        {#if isPrimary}
+                            <div class="adapter-priority-info">
+                                <Icon name="info" size={11} />
+                                <span>
+                                    {#if isEthernet}
+                                        Ethernet priorizado por menor latencia y mayor estabilidad
+                                    {:else}
+                                        Seleccionado automáticamente como primario (sin Ethernet detectado)
+                                    {/if}
+                                </span>
+                            </div>
+                        {/if}
                     </div>
                 {/each}
+            </div>
+            
+            <!-- Info boxes explicativas -->
+            <div class="adapters-info">
+                <div class="info-box priority">
+                    <div class="info-icon"><Icon name="layers" size={14} /></div>
+                    <div class="info-content">
+                        <strong>¿Por qué se prioriza uno sobre otro?</strong>
+                        <p>NetBoozt prioriza Ethernet sobre Wi-Fi por: menor latencia (~1ms vs ~5-20ms), menos interferencia, y conexión más estable. El sistema detecta automáticamente el tipo de adaptador.</p>
+                    </div>
+                </div>
+                
+                <div class="info-box fallback">
+                    <div class="info-icon"><Icon name="shield" size={14} /></div>
+                    <div class="info-content">
+                        <strong>Sistema de Fallback</strong>
+                        <p>Si el adaptador primario falla, el sistema cambia automáticamente al siguiente disponible sin intervención manual. Esto asegura conectividad continua.</p>
+                    </div>
+                </div>
+                
+                <div class="info-box limitation">
+                    <div class="info-icon"><Icon name="alert-triangle" size={14} /></div>
+                    <div class="info-content">
+                        <strong>¿Por qué no hay "Boost Dual"?</strong>
+                        <p>En Windows, combinar múltiples adaptadores para boost simultáneo requiere acceso a nivel de kernel (NDIS drivers) y licencias de Microsoft. Esta funcionalidad está reservada para NIC Teaming empresarial.</p>
+                    </div>
+                </div>
             </div>
         {/if}
     </section>
     
-    <!-- Algorithm Visualization -->
+    <!-- Algorithm Visualization & Optimization Comparison -->
     <section class="card algorithm-section">
         <div class="card-header">
-            <h2>📈 Algoritmos de Congestión</h2>
+            <h2>📈 Optimizaciones TCP/IP</h2>
             <button 
                 class="toggle-btn" 
                 on:click={() => showAlgorithmCharts = !showAlgorithmCharts}
-                title={showAlgorithmCharts ? 'Ocultar gráficas' : 'Mostrar gráficas'}
+                title={showAlgorithmCharts ? 'Ocultar comparativas' : 'Ver comparativas'}
             >
-                {showAlgorithmCharts ? 'Ocultar' : 'Ver comparativa'}
+                {showAlgorithmCharts ? 'Ocultar' : 'Ver comparativas'}
                 <Icon name={showAlgorithmCharts ? 'chevron-up' : 'chevron-down'} size={14} />
             </button>
         </div>
         
-        <p class="algorithm-intro">
-            Windows usa <strong>CUBIC</strong> como algoritmo base. NetBoozt aplica técnicas similares a <strong>BBR</strong> 
-            (HyStart++, PRR, Pacing, ECN) para mejorar el comportamiento.
-        </p>
+        <div class="algorithm-intro-box">
+            <div class="intro-icon"><Icon name="cpu" size={16} /></div>
+            <div class="intro-content">
+                <p>
+                    Windows usa <strong>CUBIC</strong> como algoritmo de control de congestión. NetBoozt aplica 
+                    optimizaciones inspiradas en <strong>Google BBR</strong> para mejorar el rendimiento:
+                </p>
+            </div>
+        </div>
         
         {#if showAlgorithmCharts}
-            <div class="algorithm-charts">
-                <div class="algorithm-chart-wrapper">
-                    <h4>CUBIC (Tradicional)</h4>
-                    <p class="chart-desc">Reduce velocidad 50% ante pérdidas</p>
-                    <AlgorithmChart algorithm="cubic" animated compact />
-                </div>
-                <div class="algorithm-chart-wrapper">
-                    <h4>BBR-like (Con optimizaciones)</h4>
-                    <p class="chart-desc">Mantiene velocidad estable</p>
-                    <AlgorithmChart algorithm="bbr-like" animated compact />
+            <!-- Comparativas de Algoritmos -->
+            <div class="algorithm-comparison-grid">
+                <!-- CUBIC vs BBR-like -->
+                <div class="comparison-section">
+                    <h4 class="comparison-title">
+                        <Icon name="git-branch" size={14} />
+                        Control de Congestión
+                    </h4>
+                    <div class="comparison-charts">
+                        <div class="algorithm-chart-wrapper default-algo">
+                            <div class="algo-badge windows">Windows Default</div>
+                            <h5>CUBIC</h5>
+                            <p class="chart-desc">Reduce ventana 50% ante pérdida</p>
+                            <AlgorithmChart algorithm="cubic" animated compact />
+                        </div>
+                        <div class="comparison-arrow">
+                            <Icon name="arrow-right" size={20} />
+                        </div>
+                        <div class="algorithm-chart-wrapper optimized-algo">
+                            <div class="algo-badge netboozt">Con NetBoozt</div>
+                            <h5>BBR-like</h5>
+                            <p class="chart-desc">Mantiene throughput estable</p>
+                            <AlgorithmChart algorithm="bbr-like" animated compact />
+                        </div>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Optimizaciones Detalladas -->
+            <div class="optimizations-comparison">
+                <h4 class="section-subtitle">
+                    <Icon name="zap" size={14} />
+                    Comparativa de Optimizaciones
+                </h4>
+                
+                <div class="opt-grid">
+                    <!-- HyStart++ -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">HyStart++</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>Slow-start agresivo, puede causar pérdidas y buffer overflow</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Sale temprano del slow-start, evita saturar buffers</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Reduce pérdidas en conexiones nuevas hasta 30%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- PRR -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">PRR (Proportional Rate Reduction)</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>Reducción brusca de velocidad (50%) ante pérdidas</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Reducción proporcional y gradual, recuperación suave</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Recuperación 2x más rápida tras congestión</span>
+                        </div>
+                    </div>
+                    
+                    <!-- ECN -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">ECN (Explicit Congestion Notification)</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>Solo detecta congestión cuando hay pérdidas reales</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Routers marcan paquetes antes de descartarlos</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Previene pérdidas, mejor para gaming y VoIP</span>
+                        </div>
+                    </div>
+                    
+                    <!-- TCP Pacing -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">TCP Pacing</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>Envío en ráfagas, puede saturar buffers intermedios</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Envío espaciado uniformemente en el tiempo</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Latencia más estable, menos jitter</span>
+                        </div>
+                    </div>
+                    
+                    <!-- TFO -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">TCP Fast Open</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>3-way handshake tradicional (3 RTT para datos)</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Datos en el SYN inicial (ahorra 1 RTT)</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Conexiones 33% más rápidas en reconexiones</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Initial RTO -->
+                    <div class="opt-card">
+                        <div class="opt-header">
+                            <span class="opt-name">Initial RTO Reducido</span>
+                            <span class="opt-status enabled">Habilitado</span>
+                        </div>
+                        <div class="opt-comparison">
+                            <div class="opt-default">
+                                <span class="opt-label">❌ Sin optimizar</span>
+                                <p>Timeout inicial de 3 segundos (muy conservador)</p>
+                            </div>
+                            <div class="opt-improved">
+                                <span class="opt-label">✅ Con NetBoozt</span>
+                                <p>Timeout inicial de 1 segundo</p>
+                            </div>
+                        </div>
+                        <div class="opt-benefit">
+                            <Icon name="trending-up" size={12} />
+                            <span>Detección de problemas 3x más rápida</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="algorithm-legend">
                 <span class="legend-item"><span class="dot loss"></span> Pérdida de paquete</span>
                 <span class="legend-item"><span class="dot speed"></span> Velocidad de transmisión</span>
             </div>
+            
+            <p class="simulation-note">
+                <Icon name="info" size={11} />
+                Las gráficas muestran comportamiento simulado. El impacto real depende de tu conexión, ISP y la congestión de red.
+            </p>
         {/if}
     </section>
     
@@ -742,10 +1094,14 @@
             {#if diagnosing}
                 <span class="spinner-small"></span> Diagnosticando...
             {:else}
-                Ejecutar Diagnóstico de 4 Fases
+                Ejecutar Diagnóstico de 5 Fases
             {/if}
         </button>
-        <DiagnosticChain {diagnostic} loading={diagnosing} />
+        <DiagnosticChain 
+            {diagnostic} 
+            loading={diagnosing} 
+            on:toast={(e) => dispatch('toast', e.detail)}
+        />
         
         <!-- Historial de diagnósticos -->
         <div class="diagnostic-history-section">
@@ -760,89 +1116,230 @@
 </div>
 
 <style>
-    .dashboard { display: flex; flex-direction: column; gap: 1.5rem; }
+    .dashboard { display: flex; flex-direction: column; gap: 1.25rem; }
     
-    /* Metrics Section - Tráfico en vivo + Speed Test */
-    .metrics-section {
+    /* ========== REALTIME METRICS SECTION ========== */
+    .realtime-metrics-section {
+        background: var(--bg-card, #1a1a1a);
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+    }
+    
+    .metrics-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+    
+    .metrics-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .metrics-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        margin: 0;
+    }
+    
+    .monitoring-status {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        background: var(--bg-tertiary, #3d3d3d);
+        color: var(--text-muted, #666);
+    }
+    
+    .monitoring-status.active {
+        background: rgba(0, 212, 170, 0.15);
+        color: #00d4aa;
+    }
+    
+    .monitoring-toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.75rem;
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 6px;
+        background: var(--bg-tertiary, #2b2b2b);
+        color: var(--text-secondary, #aaa);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .monitoring-toggle-btn:hover {
+        background: var(--bg-hover, #3d3d3d);
+        color: var(--text-primary, #fff);
+    }
+    
+    .monitoring-toggle-btn.active {
+        border-color: #ff6b6b;
+        color: #ff6b6b;
+    }
+    
+    .monitoring-toggle-btn.active:hover {
+        background: rgba(255, 107, 107, 0.1);
+    }
+    
+    .realtime-metrics-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 1rem;
     }
     
-    @media (max-width: 900px) {
-        .metrics-section {
+    @media (max-width: 800px) {
+        .realtime-metrics-grid {
             grid-template-columns: 1fr;
         }
     }
     
-    .live-traffic {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .live-indicator {
+    /* Barra de métricas de paquetes */
+    .packet-metrics-bar {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 0.75rem;
+        padding: 0.65rem 1rem;
+        background: var(--bg-tertiary, #252525);
+        border-radius: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .packet-metric {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
         font-size: 0.75rem;
-        color: var(--primary, #00d4aa);
+        color: var(--text-secondary, #aaa);
     }
     
-    .pulse-dot {
-        width: 8px;
-        height: 8px;
-        background: var(--primary, #00d4aa);
-        border-radius: 50%;
-        animation: pulse-animation 1.5s infinite;
+    .packet-metric.warning {
+        color: #FFC107;
     }
     
-    @keyframes pulse-animation {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(1.2); }
-    }
-    
-    .traffic-hint {
-        font-size: 0.7rem;
+    .metric-label {
+        font-weight: 500;
         color: var(--text-muted, #666);
-        margin: 0;
-        padding: 0.5rem;
-        background: rgba(0, 212, 170, 0.05);
-        border-radius: 6px;
-        border-left: 3px solid var(--primary, #00d4aa);
     }
     
-    .speedtest-section {
-        padding: 0 !important;
-        background: transparent !important;
+    .metric-value {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-primary, #fff);
     }
     
-    .speedtest-section :global(.speedtest-card) {
-        height: 100%;
+    .metric-value.error {
+        color: #ff6b6b;
     }
     
+    .metric-unit {
+        font-size: 0.65rem;
+        color: var(--text-muted, #666);
+    }
+    
+    @media (max-width: 600px) {
+        .packet-metrics-bar {
+            gap: 1rem;
+        }
+        
+        .packet-metric {
+            font-size: 0.7rem;
+        }
+    }
+    
+    .uptime-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border, #3d3d3d);
+        font-size: 0.75rem;
+        color: var(--text-muted, #666);
+    }
+    
+    .uptime-bar strong {
+        color: var(--text-primary, #fff);
+        font-variant-numeric: tabular-nums;
+    }
+    
+    /* Fila 1: Quick Stats - ya no se usa, ahora usamos realtime-metrics-section */
+    .quick-stats-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+    
+    @media (max-width: 900px) {
+        .quick-stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 500px) {
+        .quick-stats-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* Fila 2: Speed Test - ancho completo */
+    .speedtest-row {
+        background: transparent;
+        border-radius: 12px;
+        padding: 0;
+    }
+    
+    .speedtest-row :global(.speedtest-card) {
+        min-height: 480px;
+    }
+    
+    .speedtest-row :global(.speedtest-card.compact) {
+        min-height: 400px;
+    }
+
     /* Quick Optimization Section */
     .quick-optimization {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0;
     }
     
     .quick-optimization :global(.optimization-profiles) {
         border: 1px solid var(--border, #3d3d3d);
     }
     
+    /* Fila 4: Info Grid - Protocol & DNS lado a lado */
+    .info-grid { 
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 1rem; 
+    }
+    
+    @media (max-width: 1100px) {
+        .info-grid { 
+            grid-template-columns: 1fr; 
+        }
+    }
+    
     /* DNS Section */
     .dns-section {
-        flex: 1;
-        min-width: 340px;
         background: var(--bg-card, #1a1a1a);
         border-radius: 12px;
         padding: 1.25rem;
         display: flex;
         flex-direction: column;
+        min-height: 350px;
     }
     
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
-    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; }
     .card { background: var(--bg-card, #1a1a1a); border-radius: 12px; padding: 1.25rem; }
     .card h2 { font-size: 1rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary, #fff); }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -850,8 +1347,8 @@
     .header-actions { display: flex; gap: 0.5rem; align-items: center; }
     
     /* Protocol Card */
-    .protocol-card, .dns-card { min-height: 200px; }
-    
+    .protocol-card { min-height: 350px; }
+
     /* Web mode notice */
     .web-mode-notice {
         display: flex;
@@ -987,13 +1484,31 @@
     
     .tcp-settings-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.65rem;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+    
+    @media (min-width: 1200px) {
+        .tcp-settings-grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
+    }
+    
+    @media (max-width: 700px) {
+        .tcp-settings-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
     
     .tcp-settings-grid.compact {
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        grid-template-columns: repeat(6, 1fr);
         gap: 0.5rem;
+    }
+    
+    @media (max-width: 700px) {
+        .tcp-settings-grid.compact {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
     
     .tcp-setting {
@@ -1264,16 +1779,134 @@
     }
     
     /* Adapters */
-    .adapter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .adapter-card { background: var(--bg-elevated, #2b2b2b); border-radius: 10px; padding: 1rem; border: 2px solid transparent; transition: all 0.2s; }
-    .adapter-card.selected { border-color: var(--primary, #00d4aa); }
-    .adapter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-    .adapter-card h3 { font-size: 0.9375rem; font-weight: 600; color: var(--primary, #00d4aa); margin: 0; }
+    .adapters-section .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .adapters-section .card-header h2 { margin: 0; }
+    .icon-btn-device { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 0.35rem; 
+        padding: 0.4rem 0.75rem; 
+        background: var(--bg-elevated, #2b2b2b); 
+        border: 1px solid var(--border, #3d3d3d); 
+        border-radius: 6px; 
+        color: var(--text-secondary, #a0a0a0); 
+        font-size: 0.6875rem; 
+        cursor: pointer; 
+        transition: all 0.15s; 
+    }
+    .icon-btn-device:hover { background: var(--primary, #00d4aa); color: #000; border-color: var(--primary, #00d4aa); }
+    
+    /* Adapter grid: divide el ancho total entre N adaptadores */
+    .adapter-grid { 
+        display: grid; 
+        grid-template-columns: repeat(var(--adapter-count, 2), 1fr);
+        gap: 1rem; 
+    }
+    
+    /* Para 1 adaptador, limitar ancho */
+    .adapter-grid:has(> :only-child) {
+        grid-template-columns: minmax(300px, 500px);
+        justify-content: start;
+    }
+    
+    /* Responsive: 1 columna en móvil */
+    @media (max-width: 700px) {
+        .adapter-grid { grid-template-columns: 1fr; }
+    }
+    
+    .adapter-card { background: var(--bg-elevated, #2b2b2b); border-radius: 10px; padding: 1rem; border: 2px solid transparent; transition: all 0.2s; position: relative; }
+    .adapter-card.selected { border-color: var(--primary, #00d4aa); background: rgba(0, 212, 170, 0.05); }
+    .adapter-card.primary { border-color: var(--primary, #00d4aa); }
+    .adapter-card.fallback { border-color: var(--border, #3d3d3d); opacity: 0.85; }
+    .adapter-card.fallback:hover { opacity: 1; }
+    .adapter-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem; }
+    .adapter-title { display: flex; align-items: center; gap: 0.5rem; }
+    .adapter-icon { font-size: 1rem; }
+    .adapter-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .adapter-card h3 { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary, #fff); margin: 0; }
+    .adapter-card.selected h3 { color: var(--primary, #00d4aa); }
+    
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.5625rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .priority-badge.primary { background: rgba(0, 212, 170, 0.2); color: var(--primary, #00d4aa); }
+    .priority-badge.fallback { background: rgba(255, 193, 7, 0.15); color: var(--warning, #fdcb6e); }
+    
     .status-badge { font-size: 0.625rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
     .status-badge.up { background: rgba(0, 212, 170, 0.2); color: var(--primary, #00d4aa); }
+    .status-badge.selected { background: rgba(100, 124, 255, 0.2); color: #6b7cff; font-size: 0.5625rem; }
     .adapter-desc { font-size: 0.75rem; color: var(--text-muted, #666); margin: 0 0 0.75rem 0; }
     .adapter-stats { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-secondary, #a0a0a0); }
     
+    .adapter-priority-info { 
+        display: flex; 
+        align-items: center; 
+        gap: 0.35rem; 
+        margin-top: 0.75rem; 
+        padding: 0.5rem 0.65rem; 
+        background: rgba(0, 212, 170, 0.08); 
+        border-radius: 6px; 
+        font-size: 0.6875rem; 
+        color: var(--primary, #00d4aa); 
+    }
+    
+    /* Info boxes explicativas */
+    .adapters-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .info-box {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--bg-elevated, #2b2b2b);
+        border-radius: 8px;
+        border-left: 3px solid var(--border, #3d3d3d);
+    }
+    
+    .info-box.priority { border-left-color: var(--primary, #00d4aa); }
+    .info-box.fallback { border-left-color: var(--warning, #fdcb6e); }
+    .info-box.limitation { border-left-color: var(--error, #ff6b6b); }
+    
+    .info-box .info-icon {
+        display: flex;
+        align-items: flex-start;
+        padding-top: 0.1rem;
+        color: var(--text-muted, #666);
+    }
+    
+    .info-box.priority .info-icon { color: var(--primary, #00d4aa); }
+    .info-box.fallback .info-icon { color: var(--warning, #fdcb6e); }
+    .info-box.limitation .info-icon { color: var(--error, #ff6b6b); }
+    
+    .info-box .info-content {
+        flex: 1;
+    }
+    
+    .info-box .info-content strong {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--text-primary, #fff);
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-box .info-content p {
+        margin: 0;
+        font-size: 0.6875rem;
+        color: var(--text-muted, #666);
+        line-height: 1.4;
+    }
+
     /* Buttons & misc */
     .empty-state { text-align: center; padding: 2rem; color: var(--text-muted, #666); }
     .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
@@ -1311,6 +1944,51 @@
         border-color: var(--primary, #00d4aa);
     }
     
+    .algorithm-intro-box {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 212, 170, 0.05);
+        border: 1px solid rgba(0, 212, 170, 0.15);
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .algorithm-intro-box .intro-icon {
+        display: flex;
+        align-items: flex-start;
+        padding-top: 0.15rem;
+        color: var(--primary, #00d4aa);
+    }
+    
+    .algorithm-intro-box .intro-content p {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.8125rem;
+        color: var(--text-secondary, #a0a0a0);
+        line-height: 1.5;
+    }
+    
+    .algorithm-intro-box .intro-content strong {
+        color: var(--primary, #00d4aa);
+    }
+    
+    .simulation-note {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255, 193, 7, 0.08);
+        border-radius: 6px;
+        font-size: 0.6875rem;
+        color: var(--warning, #fdcb6e);
+    }
+    
+    .algorithm-chart-wrapper.optimized {
+        border: 1px solid rgba(0, 212, 170, 0.2);
+        background: rgba(0, 212, 170, 0.03);
+    }
+    
     .algorithm-intro {
         font-size: 0.8125rem;
         color: var(--text-secondary, #a0a0a0);
@@ -1318,7 +1996,7 @@
         line-height: 1.5;
     }
     
-    .algorithm-intro strong {
+    .algorithm-intro-box strong {
         color: var(--primary, #00d4aa);
     }
     
@@ -1326,20 +2004,13 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1rem;
-        margin-top: 1rem;
     }
     
     .algorithm-chart-wrapper {
         background: var(--bg-elevated, #2b2b2b);
         border-radius: 10px;
         padding: 1rem;
-    }
-    
-    .algorithm-chart-wrapper h4 {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--text-primary, #fff);
-        margin: 0 0 0.25rem 0;
+        border: 1px solid var(--border, #3d3d3d);
     }
     
     .chart-desc {
@@ -1379,6 +2050,211 @@
         background: var(--primary, #00d4aa);
     }
     
+    /* ========== OPTIMIZATION COMPARISON STYLES ========== */
+    .algorithm-comparison-grid {
+        margin-bottom: 1.5rem;
+    }
+    
+    .comparison-section {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .comparison-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        margin: 0 0 1rem 0;
+    }
+    
+    .comparison-charts {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    @media (max-width: 800px) {
+        .comparison-charts {
+            grid-template-columns: 1fr;
+        }
+        .comparison-arrow {
+            transform: rotate(90deg);
+        }
+    }
+    
+    .comparison-arrow {
+        color: var(--primary, #00d4aa);
+        opacity: 0.7;
+    }
+    
+    .algorithm-chart-wrapper.default-algo {
+        border-color: rgba(255, 152, 0, 0.3);
+    }
+    
+    .algorithm-chart-wrapper.optimized-algo {
+        border-color: rgba(0, 212, 170, 0.3);
+        background: rgba(0, 212, 170, 0.05);
+    }
+    
+    .algo-badge {
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .algo-badge.windows {
+        background: rgba(255, 152, 0, 0.15);
+        color: #ff9800;
+    }
+    
+    .algo-badge.netboozt {
+        background: rgba(0, 212, 170, 0.15);
+        color: var(--primary, #00d4aa);
+    }
+    
+    .algorithm-chart-wrapper h5 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        margin: 0 0 0.25rem 0;
+    }
+    
+    /* Optimizations Comparison Grid */
+    .optimizations-comparison {
+        margin-top: 1.5rem;
+    }
+    
+    .section-subtitle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        margin: 0 0 1rem 0;
+    }
+    
+    .opt-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    @media (max-width: 900px) {
+        .opt-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .opt-card {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 10px;
+        padding: 1rem;
+        transition: border-color 0.2s;
+    }
+    
+    .opt-card:hover {
+        border-color: rgba(0, 212, 170, 0.3);
+    }
+    
+    .opt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .opt-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+    }
+    
+    .opt-status {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+    }
+    
+    .opt-status.enabled {
+        background: rgba(0, 212, 170, 0.15);
+        color: var(--primary, #00d4aa);
+    }
+    
+    .opt-status.disabled {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-muted, #666);
+    }
+    
+    .opt-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .opt-default, .opt-improved {
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+    }
+    
+    .opt-default {
+        background: rgba(255, 82, 82, 0.08);
+        border: 1px solid rgba(255, 82, 82, 0.2);
+    }
+    
+    .opt-improved {
+        background: rgba(0, 212, 170, 0.08);
+        border: 1px solid rgba(0, 212, 170, 0.2);
+    }
+    
+    .opt-label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+    
+    .opt-default .opt-label {
+        color: var(--error, #ff5252);
+    }
+    
+    .opt-improved .opt-label {
+        color: var(--primary, #00d4aa);
+    }
+    
+    .opt-default p, .opt-improved p {
+        margin: 0;
+        color: var(--text-secondary, #a0a0a0);
+        line-height: 1.4;
+    }
+    
+    .opt-benefit {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(0, 212, 170, 0.1);
+        border-radius: 6px;
+        font-size: 0.7rem;
+        color: var(--primary, #00d4aa);
+    }
+
     /* Diagnostic History Section */
     .diagnostic-history-section {
         margin-top: 1.25rem;
