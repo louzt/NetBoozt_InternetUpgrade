@@ -67,7 +67,8 @@ const MOCK_DNS_WIFI = {
 };
 
 const MOCK_DIAGNOSTIC = {
-    health: 'good',
+    health: 'Good',
+    score: 85,
     failure_point: 'none',
     adapter_ok: true,
     adapter_name: 'Wi-Fi',
@@ -77,6 +78,8 @@ const MOCK_DIAGNOSTIC = {
     isp_latency_ms: 15.3,
     dns_ok: true,
     dns_latency_ms: 12.1,
+    internet_ok: true,
+    internet_latency_ms: 42.5,
     recommendation: 'Red funcionando correctamente'
 };
 
@@ -126,7 +129,16 @@ export async function invoke<T = unknown>(cmd: string, args?: Record<string, unk
         reset_dns_to_dhcp: null,
         flush_dns_cache: null,
         apply_profile: ['RSS', 'RSC', 'ECN', 'Autotuning', 'HyStart', 'PRR', 'FastOpen', 'Pacing'],
-        reset_to_defaults: ['RSS', 'RSC', 'ECN', 'Autotuning', 'Timestamps', 'HyStart', 'PRR', 'FastOpen']
+        reset_to_defaults: ['RSS', 'RSC', 'ECN', 'Autotuning', 'Timestamps', 'HyStart', 'PRR', 'FastOpen'],
+        // Nuevos comandos de diagnóstico
+        run_windows_network_troubleshooter: 'Solucionador de problemas de red iniciado',
+        reset_network_stack: 'Pila de red reseteada correctamente',
+        measure_dns_resolution: { domain: 'google.com', success: true, latency_ms: 25, error: null },
+        // Comandos DNS Intelligence
+        get_dns_failover_history: [],
+        start_dns_intel_service: 'DNS Intelligence service started',
+        stop_dns_intel_service: 'DNS Intelligence service stopped',
+        get_current_best_dns: '1.1.1.1'
     };
     
     if (cmd in mockResponses) {

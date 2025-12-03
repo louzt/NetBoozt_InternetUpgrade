@@ -135,25 +135,26 @@
 <div class="optimization-profiles" class:compact>
     <div class="profiles-header">
         <div class="header-left">
-            <h3>⚡ Perfiles de Optimización</h3>
+            <Icon name="zap" size={18} />
+            <h3>Perfiles de Optimización</h3>
             {#if currentProfile !== 'none'}
                 <span class="current-profile-badge" class:conservative={currentProfile === 'conservative'}
                       class:balanced={currentProfile === 'balanced'} class:aggressive={currentProfile === 'aggressive'}>
-                    {#if currentProfile === 'conservative'}🟢 Conservador
-                    {:else if currentProfile === 'balanced'}🟡 Balanceado
-                    {:else if currentProfile === 'aggressive'}🔴 Agresivo
+                    {#if currentProfile === 'conservative'}<Icon name="shield" size={12} /> Conservador
+                    {:else if currentProfile === 'balanced'}<Icon name="gauge" size={12} /> Balanceado
+                    {:else if currentProfile === 'aggressive'}<Icon name="zap" size={12} /> Agresivo
                     {/if}
                     <span class="score-badge">{profileScore.total}%</span>
                 </span>
             {:else}
-                <span class="current-profile-badge none">⚪ Sin optimizar</span>
+                <span class="current-profile-badge none"><Icon name="x-circle" size={12} /> Sin optimizar</span>
             {/if}
         </div>
         <div class="header-right">
             <label class="dryrun-toggle">
                 <input type="checkbox" checked={dryRunMode} on:change={toggleDryRun} />
                 <span class="toggle-slider"></span>
-                <span class="toggle-label">🧪 Dry-Run</span>
+                <span class="toggle-label"><Icon name="terminal" size={12} /> Dry-Run</span>
             </label>
         </div>
     </div>
@@ -203,7 +204,7 @@
     {#if showReset && !compact}
         <div class="reset-section">
             <button class="btn btn-danger" on:click={resetSettings} disabled={optimizing}>
-                🔄 Restaurar valores por defecto
+                <Icon name="rotate-ccw" size={14} /> Restaurar valores por defecto
             </button>
         </div>
     {/if}
@@ -245,7 +246,10 @@
 
 <style>
     .optimization-profiles {
-        background: var(--bg-card, #1a1a1a);
+        background: rgba(26, 26, 26, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
         padding: 1.25rem;
     }
@@ -266,7 +270,8 @@
     .header-left {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
+        color: var(--primary, #00d4aa);
     }
     
     .profiles-header h3 {

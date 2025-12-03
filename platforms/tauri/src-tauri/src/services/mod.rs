@@ -7,4 +7,15 @@
 
 pub mod diagnostics;
 pub mod dns;
+pub mod dns_intelligence;
 pub mod notifications;
+
+// Re-export principales
+pub use dns_intelligence::{
+    get_dns_intelligence, 
+    start_dns_intelligence,
+    stop_dns_intelligence,
+    DnsMetrics,
+    DnsIntelSummary,
+    FailoverEvent,
+};

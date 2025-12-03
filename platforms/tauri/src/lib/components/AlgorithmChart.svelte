@@ -284,12 +284,22 @@
         <span class="legend-dot" style="background: {color}"></span>
         <span class="legend-text">
             {#if algorithm === 'cubic'}
-                CUBIC: Cae ~50% por pérdida
+                CUBIC: Reduce ~50% ante pérdida de paquetes
             {:else}
-                BBR-like: Estable, tolera pérdidas
+                BBR-like: Mantiene throughput, tolera pérdidas
             {/if}
         </span>
     </div>
+    
+    {#if !compact}
+        <div class="chart-info">
+            {#if algorithm === 'cubic'}
+                <p>Algoritmo tradicional de Windows. Reduce agresivamente la ventana de congestión cuando detecta pérdida de paquetes, causando caídas notables de velocidad.</p>
+            {:else}
+                <p>Optimizaciones NetBoozt: HyStart++ (slow-start rápido), PRR (recuperación suave), ECN (detección temprana), Pacing (envío uniforme). Simula comportamiento BBR sobre CUBIC.</p>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -343,5 +353,20 @@
     
     .compact .legend-text {
         font-size: 0.6rem;
+    }
+    
+    .chart-info {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 6px;
+        border-left: 2px solid var(--primary, #00d4aa);
+    }
+    
+    .chart-info p {
+        margin: 0;
+        font-size: 0.65rem;
+        color: var(--text-muted, #888);
+        line-height: 1.5;
     }
 </style>

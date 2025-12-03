@@ -43,7 +43,7 @@ export interface TcpSettings {
 // ============================================
 
 export type NetworkHealth = 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Bad' | 'Down';
-export type FailurePoint = 'None' | 'Adapter' | 'Router' | 'Isp' | 'Dns';
+export type FailurePoint = 'None' | 'Adapter' | 'Router' | 'Isp' | 'Dns' | 'Internet';
 
 export interface DiagnosticResult {
     health: NetworkHealth;
@@ -57,6 +57,8 @@ export interface DiagnosticResult {
     isp_latency_ms: number;
     dns_ok: boolean;
     dns_latency_ms: number;
+    internet_ok: boolean;
+    internet_latency_ms: number;
     recommendation: string;
 }
 

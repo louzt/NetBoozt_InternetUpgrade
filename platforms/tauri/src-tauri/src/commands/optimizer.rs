@@ -29,6 +29,10 @@ pub struct TcpSettings {
     pub pacing: String,
     pub initial_rto: String,
     pub rack: String,
+    // Nuevas optimizaciones del CLI Python
+    pub nagle_disabled: bool,
+    pub network_throttling_disabled: bool,
+    pub tcp_1323_opts: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -212,6 +216,10 @@ pub fn get_current_settings_internal() -> Result<TcpSettings, String> {
         pacing,
         initial_rto,
         rack: "via PRR".to_string(), // RACK-TLP se maneja junto con PRR en Windows
+        // Nuevas optimizaciones
+        nagle_disabled: get_registry_dword("TcpNoDelay").map_or(false, |v| v == 1),
+        network_throttling_disabled: get_registry_dword("NetworkThrottlingIndex").map_or(false, |v| v == 0xffffffff),
+        tcp_1323_opts: get_registry_dword("Tcp1323Opts").unwrap_or(0),
     })
 }
 
@@ -310,6 +318,29 @@ pub fn apply_profile_internal(profile: &str) -> Result<Vec<String>, String> {
             if set_registry_dword("TcpInitialRto", 1000).is_ok() {
                 applied.push("Initial RTO reduced".to_string());
             }
+            
+            // === NUEVAS OPTIMIZACIONES DEL CLI PYTHON ===
+            
+            // Network Throttling Index: Elimina el delay artificial de 10ms
+            // https://docs.microsoft.com/en-us/windows/win32/api/qos2/
+            // Valor 0xFFFFFFFF = sin throttling
+            if set_registry_dword("NetworkThrottlingIndex", 0xffffffff).is_ok() {
+                applied.push("Network Throttling disabled (10ms delay removed)".to_string());
+            }
+            
+            // Nagle Algorithm: Desactivar para reducir latencia en gaming/realtime
+            // TcpNoDelay=1 = Nagle desactivado
+            if set_registry_dword("TcpNoDelay", 1).is_ok() {
+                applied.push("Nagle Algorithm disabled (lower latency)".to_string());
+            }
+            
+            // TCP Window Scaling (Tcp1323Opts)
+            // Bit 0 (valor 1): Window scaling
+            // Bit 1 (valor 2): Timestamps
+            // Valor 3 = ambos habilitados
+            if set_registry_dword("Tcp1323Opts", 3).is_ok() {
+                applied.push("TCP Window Scaling + Timestamps (Tcp1323Opts=3)".to_string());
+            }
         }
         _ => {
             return Err(format!("Perfil desconocido: {}", profile));
@@ -359,6 +390,16 @@ pub fn reset_to_defaults_internal() -> Result<Vec<String>, String> {
     
     let _ = delete_registry_value("TcpInitialRto");
     reset.push("Initial RTO reset".to_string());
+    
+    // Reset nuevas optimizaciones
+    let _ = delete_registry_value("NetworkThrottlingIndex");
+    reset.push("Network Throttling reset".to_string());
+    
+    let _ = delete_registry_value("TcpNoDelay");
+    reset.push("Nagle Algorithm restored".to_string());
+    
+    let _ = delete_registry_value("Tcp1323Opts");
+    reset.push("Tcp1323Opts reset".to_string());
     
     log::info!("Configuración restaurada: {} cambios", reset.len());
     Ok(reset)
@@ -443,6 +484,31 @@ pub async fn get_available_optimizations() -> Result<Vec<OptimizationInfo>, Stri
             risk_level: "medium".to_string(),
             // TcpInitialRto=1000 (1 segundo) es el valor optimizado
             applied: get_registry_dword("TcpInitialRto").map_or(false, |v| v <= 1000),
+        },
+        // === NUEVAS OPTIMIZACIONES DEL CLI PYTHON ===
+        OptimizationInfo {
+            id: "network_throttling".to_string(),
+            name: "Network Throttling Index".to_string(),
+            description: "Elimina el delay artificial de 10ms que Windows aplica a aplicaciones multimedia. Mejora latencia en gaming y VoIP.".to_string(),
+            category: "Gaming".to_string(),
+            risk_level: "medium".to_string(),
+            applied: current.network_throttling_disabled,
+        },
+        OptimizationInfo {
+            id: "nagle".to_string(),
+            name: "Nagle Algorithm (TcpNoDelay)".to_string(),
+            description: "Desactiva el algoritmo de Nagle que agrupa paquetes pequeños. Reduce latencia en tiempo real y gaming.".to_string(),
+            category: "Gaming".to_string(),
+            risk_level: "medium".to_string(),
+            applied: current.nagle_disabled,
+        },
+        OptimizationInfo {
+            id: "tcp_1323_opts".to_string(),
+            name: "TCP Window Scaling (RFC 1323)".to_string(),
+            description: "Habilita window scaling y timestamps via registro. Permite ventanas TCP mayores a 64KB para conexiones de alta velocidad.".to_string(),
+            category: "TCP".to_string(),
+            risk_level: "low".to_string(),
+            applied: current.tcp_1323_opts >= 3,
         },
     ])
 }

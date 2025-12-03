@@ -6,10 +6,19 @@
      * By LOUST (www.loust.pro)
      */
     
+    import { invoke } from '$lib/tauri-bridge';
+    import { createEventDispatcher } from 'svelte';
     import type { DiagnosticResult, NetworkHealth } from '$lib/types';
     
     export let diagnostic: DiagnosticResult | null = null;
     export let loading: boolean = false;
+    
+    const dispatch = createEventDispatcher<{
+        toast: { type: 'success' | 'error' | 'info' | 'warning'; message: string };
+    }>();
+    
+    let runningTroubleshooter = false;
+    let resettingNetwork = false;
     
     const healthColors: Record<NetworkHealth, string> = {
         Excellent: '#00d4aa',
@@ -28,6 +37,44 @@
         Bad: '🔴',
         Down: '⚫'
     };
+    
+    // Mostrar botones de ayuda si hay problemas
+    $: hasProblems = diagnostic && (
+        !diagnostic.adapter_ok || 
+        !diagnostic.router_ok || 
+        !diagnostic.isp_ok || 
+        !diagnostic.dns_ok ||
+        !diagnostic.internet_ok ||
+        (diagnostic.score && diagnostic.score < 70)
+    );
+    
+    async function runWindowsTroubleshooter() {
+        try {
+            runningTroubleshooter = true;
+            await invoke('run_windows_network_troubleshooter');
+            dispatch('toast', { type: 'info', message: 'Solucionador de Windows iniciado' });
+        } catch (e) {
+            dispatch('toast', { type: 'error', message: `Error: ${e}` });
+        } finally {
+            runningTroubleshooter = false;
+        }
+    }
+    
+    async function resetNetworkStack() {
+        if (!confirm('¿Resetear la pila de red de Windows?\n\nEsto ejecutará:\n• Winsock reset\n• IP stack reset\n• DNS flush\n• DHCP release/renew\n\n⚠️ Puede interrumpir temporalmente la conexión.')) {
+            return;
+        }
+        
+        try {
+            resettingNetwork = true;
+            await invoke('reset_network_stack');
+            dispatch('toast', { type: 'success', message: 'Pila de red reseteada. La conexión debería restaurarse en unos segundos.' });
+        } catch (e) {
+            dispatch('toast', { type: 'error', message: `Error: ${e}` });
+        } finally {
+            resettingNetwork = false;
+        }
+    }
 </script>
 
 <div class="diagnostic-container">
@@ -111,6 +158,21 @@
                     </span>
                 </div>
             </div>
+            
+            <div class="chain-arrow">→</div>
+            
+            <!-- Internet -->
+            <div class="chain-step" class:ok={diagnostic.internet_ok} class:error={!diagnostic.internet_ok && diagnostic.dns_ok}>
+                <div class="step-icon">
+                    {diagnostic.internet_ok ? '✅' : (diagnostic.dns_ok ? '⚠️' : '⏸️')}
+                </div>
+                <div class="step-info">
+                    <span class="step-label">Internet</span>
+                    <span class="step-latency">
+                        {diagnostic.internet_latency_ms > 0 ? `${diagnostic.internet_latency_ms.toFixed(0)}ms` : (diagnostic.dns_ok ? 'OK' : '---')}
+                    </span>
+                </div>
+            </div>
         </div>
         
         <!-- Recommendation -->
@@ -118,6 +180,39 @@
             <div class="recommendation">
                 <span class="recommendation-icon">💡</span>
                 <span class="recommendation-text">{diagnostic.recommendation}</span>
+            </div>
+        {/if}
+        
+        <!-- Action Buttons (show when there are problems) -->
+        {#if hasProblems}
+            <div class="action-buttons">
+                <button 
+                    class="action-btn troubleshooter"
+                    on:click={runWindowsTroubleshooter}
+                    disabled={runningTroubleshooter}
+                    title="Ejecutar el solucionador de problemas de red integrado de Windows"
+                >
+                    {#if runningTroubleshooter}
+                        <span class="spinner-small"></span>
+                        Iniciando...
+                    {:else}
+                        🔧 Solucionador Windows
+                    {/if}
+                </button>
+                
+                <button 
+                    class="action-btn reset"
+                    on:click={resetNetworkStack}
+                    disabled={resettingNetwork}
+                    title="Resetear Winsock, pila IP, DNS y renovar DHCP"
+                >
+                    {#if resettingNetwork}
+                        <span class="spinner-small"></span>
+                        Reseteando...
+                    {:else}
+                        🔄 Reset Red
+                    {/if}
+                </button>
             </div>
         {/if}
     {:else}
@@ -307,6 +402,62 @@
         to { transform: rotate(360deg); }
     }
     
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 1.25rem;
+        flex-wrap: wrap;
+    }
+    
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .action-btn.troubleshooter {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+    }
+    
+    .action-btn.troubleshooter:hover:not(:disabled) {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        transform: translateY(-1px);
+    }
+    
+    .action-btn.reset {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+    }
+    
+    .action-btn.reset:hover:not(:disabled) {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        transform: translateY(-1px);
+    }
+    
+    .spinner-small {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    
     /* Responsive */
     @media (max-width: 600px) {
         .chain {
@@ -315,6 +466,15 @@
         
         .chain-arrow {
             transform: rotate(90deg);
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .action-btn {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>

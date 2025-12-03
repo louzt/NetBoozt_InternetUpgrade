@@ -124,7 +124,7 @@
     .logo-text {
         font-size: 1.125rem;
         font-weight: 700;
-        color: #00d4aa;
+        color: #ffffff;
         font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
         letter-spacing: 0.5px;
         white-space: nowrap;
@@ -141,6 +141,7 @@
         animation: blink 0.8s infinite step-end;
         color: #00d4aa;
         font-weight: 400;
+        display: none; /* Ocultar cursor/separador */
     }
     
     @keyframes blink {

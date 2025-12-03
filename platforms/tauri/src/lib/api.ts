@@ -95,6 +95,32 @@ export async function checkDNSHealth(server: string): Promise<DNSHealth> {
     return invoke<DNSHealth>('check_dns_health', { server });
 }
 
+/**
+ * Ejecutar el solucionador de problemas de red de Windows
+ */
+export async function runWindowsNetworkTroubleshooter(): Promise<string> {
+    return invoke<string>('run_windows_network_troubleshooter');
+}
+
+/**
+ * Resetear la pila de red de Windows (winsock, IP, DNS, DHCP)
+ */
+export async function resetNetworkStack(): Promise<string> {
+    return invoke<string>('reset_network_stack');
+}
+
+/**
+ * Medir tiempo de resolución DNS para un dominio
+ */
+export async function measureDnsResolution(domain: string): Promise<{
+    domain: string;
+    success: boolean;
+    latency_ms: number | null;
+    error: string | null;
+}> {
+    return invoke('measure_dns_resolution', { domain });
+}
+
 // ============================================
 // Optimizer Commands
 // ============================================
@@ -200,6 +226,34 @@ export async function forceFailover(tier: number): Promise<boolean> {
  */
 export async function getFailoverHistory(limit: number = 20): Promise<FailoverEvent[]> {
     return invoke<FailoverEvent[]>('get_failover_history', { limit });
+}
+
+/**
+ * Obtener historial de failovers DNS del servicio de inteligencia
+ */
+export async function getDnsFailoverHistory(): Promise<FailoverEvent[]> {
+    return invoke<FailoverEvent[]>('get_dns_failover_history');
+}
+
+/**
+ * Iniciar el servicio de DNS Intelligence
+ */
+export async function startDnsIntelService(): Promise<string> {
+    return invoke<string>('start_dns_intel_service');
+}
+
+/**
+ * Detener el servicio de DNS Intelligence
+ */
+export async function stopDnsIntelService(): Promise<string> {
+    return invoke<string>('stop_dns_intel_service');
+}
+
+/**
+ * Obtener el mejor DNS actual según el servicio de inteligencia
+ */
+export async function getCurrentBestDns(): Promise<string | null> {
+    return invoke<string | null>('get_current_best_dns');
 }
 
 // ============================================
