@@ -223,7 +223,7 @@
                     <span class="setting-label">
                         <Icon name="image" size={12} />
                         Fondo
-                    </label>
+                    </span>
                     <div class="background-grid">
                         {#each BACKGROUNDS as bg}
                             {#if bg.id !== 'custom'}
@@ -266,7 +266,7 @@
                     <span class="setting-label">
                         <Icon name="droplet" size={12} />
                         Color de acento
-                    </label>
+                    </span>
                     <div class="color-grid">
                         {#each ACCENT_COLORS as { color, name }}
                             <button 
@@ -323,7 +323,7 @@
                     <span class="setting-label">
                         <Icon name="server" size={12} />
                         Proveedor preferido
-                    </label>
+                    </span>
                     <div class="dns-options">
                         {#each DNS_PROVIDERS as provider}
                             <button 
@@ -351,7 +351,7 @@
                     <span class="setting-label">
                         <Icon name="clock" size={12} />
                         Verificar cada
-                    </label>
+                    </span>
                     <select bind:value={settings.dnsCheckInterval} class="setting-select">
                         <option value={15000}>15 segundos</option>
                         <option value={30000}>30 segundos</option>
@@ -417,7 +417,7 @@
                     <span class="setting-label">
                         <Icon name="timer" size={12} />
                         Intervalo de actualización
-                    </label>
+                    </span>
                     <select bind:value={settings.updateInterval} class="setting-select">
                         <option value={500}>0.5s (alto consumo)</option>
                         <option value={1000}>1 segundo</option>
@@ -472,7 +472,7 @@
                     <span class="setting-label">
                         <Icon name="file-text" size={12} />
                         Nivel de log
-                    </label>
+                    </span>
                     <select bind:value={settings.logLevel} class="setting-select">
                         <option value="error">Solo errores</option>
                         <option value="warn">Warnings</option>
