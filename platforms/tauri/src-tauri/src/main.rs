@@ -93,6 +93,7 @@ fn main() {
             commands::diagnostics::check_dns_health,
             commands::diagnostics::check_single_dns_health,
             commands::diagnostics::run_windows_network_troubleshooter,
+            commands::diagnostics::open_system_tool,
             commands::diagnostics::reset_network_stack,
             commands::diagnostics::measure_dns_resolution,
             

@@ -3,12 +3,18 @@
      * GitHub Integration Component
      * Muestra estadísticas del repositorio con datos dinámicos desde GitHub API
      */
-    import { onMount } from 'svelte';
+    import { onMount, createEventDispatcher } from 'svelte';
     import Tooltip from './Tooltip.svelte';
     import Icon from './Icon.svelte';
     
+    const dispatch = createEventDispatcher();
+    
     const REPO_OWNER = 'louzt';
     const REPO_NAME = 'NetBoozt_InternetUpgrade';
+    
+    function goToDocs() {
+        dispatch('navigate', { tab: 'docs', anchor: 'readme' });
+    }
     
     interface RepoStats {
         stars: number;
@@ -42,20 +48,22 @@
         {
             name: 'Tauri (Rust + Svelte)',
             version: '3.0.0',
-            status: 'beta',
+            status: 'production',
             icon: '⚡',
-            description: 'Versión nativa multiplataforma. Inicio instantáneo (<1s), ~5MB de tamaño.',
+            description: 'Versión nativa multiplataforma. Inicio instantáneo (<1s), ~8MB de tamaño.',
             features: ['Inicio ultra-rápido', 'Bajo consumo RAM', 'Multiplataforma nativa', 'UI moderna con Svelte'],
-            languages: ['Rust', 'TypeScript', 'Svelte', 'CSS', 'HTML']
+            languages: ['Rust', 'TypeScript', 'Svelte', 'CSS', 'HTML'],
+            downloadUrl: 'https://loust.pro/opensource/netboozt/tauri_v3.0.0'
         },
         {
             name: 'Python (CustomTkinter)',
-            version: '2.2.1',
-            status: 'stable',
+            version: '2.2.0',
+            status: 'legacy',
             icon: '🐍',
-            description: 'Versión original en Python. Compila con Nuitka a binario nativo.',
-            features: ['Features completas', 'CLI interactivo', 'Nuitka build', 'Solo Windows'],
-            languages: ['Python', 'PowerShell', 'Batchfile']
+            description: 'Versión original en Python. Inicio lento (5-8s), ~25MB. Solo para CLI.',
+            features: ['CLI interactivo', 'Nuitka build', 'Solo Windows', 'Mantenimiento mínimo'],
+            languages: ['Python', 'PowerShell', 'Batchfile'],
+            downloadUrl: 'https://loust.pro/opensource/netboozt/python_v2.2.0_legacy'
         }
     ];
     
@@ -167,11 +175,30 @@
         return percentage.toFixed(1) + '%';
     }
     
-    // Calcular porcentaje numérico para CSS
+    // Calcular porcentaje numérico para CSS - basado en bytes propios
     function getLanguagePercent(bytes: number): number {
         const total = Object.values(stats?.languages || {}).reduce((a, b) => a + b, 0);
         if (total === 0) return 0;
-        return Math.max((bytes / total) * 100, 2); // Mínimo 2% para visibilidad
+        return (bytes / total) * 100;
+    }
+    
+    // Para las barras de versión, calcular porcentaje relativo a los lenguajes de esa versión
+    function getVersionLanguagePercent(lang: string, versionLanguages: string[]): number {
+        if (!stats?.languages) return 0;
+        const languages = stats.languages;
+        const versionBytes = versionLanguages.reduce((sum, l) => sum + (languages[l] || 0), 0);
+        if (versionBytes === 0) return 0;
+        const bytes = languages[lang] || 0;
+        return (bytes / versionBytes) * 100;
+    }
+    
+    // Obtener porcentaje formateado de un lenguaje específico
+    function getLanguagePercentFormatted(lang: string): string {
+        if (!stats?.languages) return '0%';
+        const total = Object.values(stats.languages).reduce((a, b) => a + b, 0);
+        if (total === 0) return '0%';
+        const bytes = stats.languages[lang] || 0;
+        return ((bytes / total) * 100).toFixed(1) + '%';
     }
     
     function getLanguageColor(lang: string): string {
@@ -279,36 +306,35 @@
                         <span class="meta-value">{stats.lastUpdate}</span>
                     </div>
                 </div>
-                
-                {#if Object.keys(stats.languages).length > 0}
-                    <div class="languages-card card">
-                        <span class="card-title">Lenguajes</span>
-                        <div class="languages-bar">
-                            {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]) as [lang, bytes]}
-                                <Tooltip text="{lang}: {formatBytes(bytes)}">
-                                    <div 
-                                        class="lang-segment" 
-                                        style="flex: {getLanguagePercent(bytes)}; background: {getLanguageColor(lang)};"
-                                    ></div>
-                                </Tooltip>
-                            {/each}
-                        </div>
-                        <div class="languages-legend">
-                            {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]).slice(0, 6) as [lang, bytes]}
-                                <span class="lang-item">
-                                    <span class="lang-dot" style="background: {getLanguageColor(lang)}"></span>
-                                    {lang} <span class="lang-percent">{formatBytes(bytes)}</span>
-                                </span>
-                            {/each}
-                        </div>
-                    </div>
-                {:else}
-                    <div class="languages-card card empty">
-                        <span class="card-title">Lenguajes</span>
-                        <p class="empty-text">No se pudieron cargar los lenguajes</p>
-                    </div>
-                {/if}
             </section>
+            
+            <!-- Languages Bar - Full Width -->
+            {#if Object.keys(stats.languages).length > 0}
+                {@const totalBytes = Object.values(stats.languages).reduce((a, b) => a + b, 0)}
+                <section class="card languages-section">
+                    <span class="card-title">Lenguajes del Repositorio</span>
+                    <div class="languages-bar-full">
+                        {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]) as [lang, bytes]}
+                            {@const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0}
+                            <div 
+                                class="lang-segment-full" 
+                                style="flex: {percent} 0 0%; background: {getLanguageColor(lang)};"
+                                title="{lang}: {percent.toFixed(1)}%"
+                            ></div>
+                        {/each}
+                    </div>
+                    <div class="languages-legend-full">
+                        {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]) as [lang, bytes]}
+                            {@const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0}
+                            <span class="lang-item-full">
+                                <span class="lang-dot" style="background: {getLanguageColor(lang)}"></span>
+                                <span class="lang-name">{lang}</span>
+                                <span class="lang-percent">{percent.toFixed(1)}%</span>
+                            </span>
+                        {/each}
+                    </div>
+                </section>
+            {/if}
         {/if}
         
         <!-- Versiones del Proyecto con Lenguajes -->
@@ -318,18 +344,16 @@
             </div>
             <div class="versions-grid">
                 {#each VERSIONS as ver}
-                    <div class="version-card" class:stable={ver.status === 'stable'} class:beta={ver.status === 'beta'}>
+                    <div class="version-card" class:production={ver.status === 'production'} class:legacy={ver.status === 'legacy'}>
                         <div class="version-header">
                             <span class="version-icon">{ver.icon}</span>
                             <div class="version-info">
                                 <span class="version-name">{ver.name}</span>
                                 <span class="version-tag">
                                     v{ver.version}
-                                    {#if ver.status === 'stable'}
-                                        <span class="status-badge stable">✓ Estable</span>
-                                    {:else if ver.status === 'beta'}
-                                        <span class="status-badge beta">🧪 Beta</span>
-                                    {:else}
+                                    {#if ver.status === 'production'}
+                                        <span class="status-badge production">✓ Producción</span>
+                                    {:else if ver.status === 'legacy'}
                                         <span class="status-badge legacy">📦 Legacy</span>
                                     {/if}
                                 </span>
@@ -339,26 +363,33 @@
                         
                         <!-- Lenguajes de esta versión -->
                         {#if ver.languages && stats?.languages}
+                            {@const languages = stats.languages}
+                            {@const versionBytes = ver.languages.reduce((sum, l) => sum + (languages[l] || 0), 0)}
                             <div class="version-languages">
                                 <span class="lang-title">Lenguajes:</span>
                                 <div class="lang-bar-mini">
                                     {#each ver.languages as lang}
-                                        {@const bytes = stats.languages[lang] || 0}
-                                        {#if bytes > 0}
-                                            <Tooltip text="{lang}: {formatBytes(bytes)}">
-                                                <div 
-                                                    class="lang-seg" 
-                                                    style="flex: {getLanguagePercent(bytes)}; background: {getLanguageColor(lang)};"
-                                                ></div>
-                                            </Tooltip>
+                                        {@const bytes = languages[lang] || 0}
+                                        {@const percent = versionBytes > 0 ? (bytes / versionBytes) * 100 : 0}
+                                        {#if percent > 0}
+                                            <div 
+                                                class="lang-seg" 
+                                                style="flex: {percent} 0 0%; background: {getLanguageColor(lang)};"
+                                                title="{lang}: {percent.toFixed(1)}%"
+                                            ></div>
                                         {/if}
                                     {/each}
                                 </div>
                                 <div class="lang-tags">
                                     {#each ver.languages as lang}
+                                        {@const bytes = languages[lang] || 0}
+                                        {@const percent = versionBytes > 0 ? (bytes / versionBytes) * 100 : 0}
                                         <span class="lang-tag" style="--color: {getLanguageColor(lang)}">
                                             <span class="tag-dot"></span>
                                             {lang}
+                                            {#if percent > 0}
+                                                <span class="tag-percent">{percent.toFixed(0)}%</span>
+                                            {/if}
                                         </span>
                                     {/each}
                                 </div>
@@ -370,6 +401,12 @@
                                 <li>{feat}</li>
                             {/each}
                         </ul>
+                        
+                        <!-- Botón de descarga -->
+                        <a href={ver.downloadUrl} target="_blank" class="version-download-btn" class:primary={ver.status === 'production'}>
+                            <Icon name="download" size={14} />
+                            Descargar v{ver.version}
+                        </a>
                     </div>
                 {/each}
             </div>
@@ -396,11 +433,23 @@
             {:else}
                 <div class="releases-list">
                     {#each releases as release}
+                        {@const isTauri = release.tag.startsWith('v3')}
+                        {@const downloadUrl = isTauri 
+                            ? 'https://loust.pro/opensource/netboozt/tauri_v3.0.0' 
+                            : 'https://loust.pro/opensource/netboozt/python_v2.2.0_legacy'}
                         <div class="release-item" class:prerelease={release.prerelease}>
                             <div class="release-header">
                                 <div class="release-info">
-                                    <span class="release-tag">{release.tag}</span>
-                                    <span class="release-name">{release.name}</span>
+                                    <a href="https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/{release.tag}" 
+                                       target="_blank" 
+                                       class="release-tag-link">
+                                        <span class="release-tag">{release.tag}</span>
+                                    </a>
+                                    <a href="https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/{release.tag}" 
+                                       target="_blank"
+                                       class="release-name-link">
+                                        {release.name}
+                                    </a>
                                     {#if release.prerelease}
                                         <span class="prerelease-badge">Pre-release</span>
                                     {/if}
@@ -410,6 +459,20 @@
                                     <span class="release-downloads">⬇️ {release.downloads}</span>
                                 </div>
                             </div>
+                            
+                            <!-- Botones de descarga -->
+                            <div class="release-actions">
+                                <a href={downloadUrl} target="_blank" class="btn btn-primary btn-sm">
+                                    <Icon name="download" size={14} />
+                                    Descargar desde LOUST
+                                </a>
+                                <a href="https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/tag/{release.tag}" 
+                                   target="_blank" 
+                                   class="btn btn-ghost btn-sm">
+                                    Ver en GitHub
+                                </a>
+                            </div>
+                            
                             {#if release.assets.length > 0}
                                 <div class="release-assets">
                                     {#each release.assets as asset}
@@ -428,45 +491,7 @@
             {/if}
         </section>
         
-        <!-- Contributors -->
-        <section class="card">
-            <div class="card-header">
-                <h2>👥 Contribuidores</h2>
-                <button class="btn btn-ghost" on:click={() => openGitHub('/graphs/contributors')}>
-                    Ver todos →
-                </button>
-            </div>
-            
-            {#if loading}
-                <div class="loading-mini">
-                    <div class="spinner-sm"></div>
-                    <span>Cargando contribuidores...</span>
-                </div>
-            {:else if contributors.length === 0}
-                <div class="empty-text">
-                    <p>No se encontraron contribuidores</p>
-                    <button class="btn btn-ghost" on:click={fetchRepoData}>Reintentar</button>
-                </div>
-            {:else}
-                <div class="contributors-list">
-                    {#each contributors as contrib, i}
-                        <a href={contrib.profileUrl} target="_blank" class="contributor-row" class:featured={i === 0}>
-                            <img src={contrib.avatar} alt={contrib.login} class="contributor-avatar" />
-                            <div class="contributor-info">
-                                <span class="contributor-name">{contrib.login}</span>
-                                <span class="contributor-role">{i === 0 ? '👑 Autor principal' : 'Colaborador'}</span>
-                            </div>
-                            <div class="contributor-stats">
-                                <span class="contrib-count">{contrib.contributions}</span>
-                                <span class="contrib-label">commits</span>
-                            </div>
-                        </a>
-                    {/each}
-                </div>
-            {/if}
-        </section>
-        
-        <!-- Quick Links -->
+        <!-- Quick Links - 5 columns -->
         <section class="quick-links">
             <button class="quick-link" on:click={() => openGitHub('/issues/new')}>
                 <Icon name="bug" size={16} />
@@ -483,6 +508,25 @@
             <button class="quick-link" on:click={() => openGitHub('/blob/main/CONTRIBUTING.md')}>
                 <Icon name="code" size={16} />
                 Contribuir
+            </button>
+            <button class="quick-link" on:click={() => openGitHub('/graphs/contributors')}>
+                <Icon name="people" size={16} />
+                Contribuidores
+            </button>
+        </section>
+        
+        <!-- CTA to Docs -->
+        <section class="docs-cta card">
+            <div class="cta-content">
+                <div class="cta-icon">📖</div>
+                <div class="cta-text">
+                    <h3>¿Quieres ver la documentación completa?</h3>
+                    <p>El README y guías de uso están disponibles en la pestaña de Documentación</p>
+                </div>
+            </div>
+            <button class="btn btn-primary cta-button" on:click={goToDocs}>
+                <Icon name="book" size={16} />
+                Ir a Documentación
             </button>
         </section>
     {/if}
@@ -650,58 +694,71 @@
         font-weight: 500;
     }
     
-    /* Languages */
-    .languages-card {
+    /* Languages - Full Width Bar */
+    .languages-section {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
     
-    .languages-bar {
+    .languages-bar-full {
         display: flex;
-        height: 8px;
-        border-radius: 4px;
+        width: 100%;
+        height: 10px;
+        border-radius: 5px;
         overflow: hidden;
         background: var(--bg-elevated, #2b2b2b);
     }
     
-    .lang-segment {
+    .lang-segment-full {
         height: 100%;
-        min-width: 4px;
-        transition: opacity 0.2s;
+        min-width: 2px;
+        flex-shrink: 1;
+        flex-grow: 0;
+        transition: opacity 0.2s, filter 0.2s;
     }
     
-    .lang-segment:hover {
-        opacity: 0.8;
+    .lang-segment-full:hover {
+        filter: brightness(1.3);
     }
     
-    .languages-legend {
+    .languages-legend-full {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 0.75rem 1rem;
     }
     
-    .lang-item {
+    .lang-item-full {
         display: flex;
         align-items: center;
         gap: 0.375rem;
         font-size: 0.75rem;
         color: var(--text-secondary, #a0a0a0);
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        transition: background 0.15s;
+    }
+    
+    .lang-item-full:hover {
+        background: var(--bg-elevated, #2b2b2b);
+    }
+    
+    .lang-name {
+        font-weight: 500;
+        color: var(--text-primary, #fff);
     }
     
     .lang-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
+        flex-shrink: 0;
     }
     
     .lang-percent {
         color: var(--text-muted, #666);
-        font-size: 0.65rem;
-    }
-    
-    .languages-card.empty {
-        min-height: 60px;
+        font-size: 0.7rem;
     }
     
     .loading-mini {
@@ -741,11 +798,18 @@
         padding: 1.25rem;
         border: 1px solid transparent;
         transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
     }
     
-    .version-card.stable {
+    .version-card.production {
         border-color: var(--primary, #00d4aa);
         background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), transparent);
+    }
+    
+    .version-card.legacy {
+        border-color: var(--border, #3d3d3d);
+        opacity: 0.85;
     }
     
     .version-header {
@@ -803,19 +867,47 @@
         margin-left: 0.5rem;
     }
     
-    .status-badge.stable {
+    .status-badge.production {
         background: rgba(0, 212, 170, 0.2);
         color: var(--primary, #00d4aa);
-    }
-    
-    .status-badge.beta {
-        background: rgba(253, 203, 110, 0.2);
-        color: #fdcb6e;
     }
     
     .status-badge.legacy {
         background: rgba(255, 255, 255, 0.1);
         color: var(--text-muted, #666);
+    }
+    
+    /* Version download button */
+    .version-download-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        margin-top: auto;
+        transition: all 0.15s ease;
+        background: var(--bg-card, #1a1a1a);
+        color: var(--text-secondary, #a0a0a0);
+        border: 1px solid var(--border, #3d3d3d);
+    }
+    
+    .version-download-btn:hover {
+        background: var(--bg-elevated, #3b3b3b);
+        color: var(--text-primary, #fff);
+    }
+    
+    .version-download-btn.primary {
+        background: var(--primary, #00d4aa);
+        color: #000;
+        border-color: var(--primary, #00d4aa);
+    }
+    
+    .version-download-btn.primary:hover {
+        background: #00e6b8;
     }
     
     /* Version languages */
@@ -837,16 +929,22 @@
     
     .lang-bar-mini {
         display: flex;
-        height: 6px;
-        border-radius: 3px;
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
         overflow: hidden;
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.1);
         margin-bottom: 0.5rem;
     }
     
     .lang-seg {
         height: 100%;
-        min-width: 4px;
+        min-width: 2px;
+        transition: filter 0.15s;
+    }
+    
+    .lang-seg:hover {
+        filter: brightness(1.3);
     }
     
     .lang-tags {
@@ -871,6 +969,12 @@
         height: 6px;
         border-radius: 50%;
         background: var(--color);
+    }
+    
+    .tag-percent {
+        font-size: 0.6rem;
+        color: var(--text-muted, #666);
+        margin-left: 0.15rem;
     }
     
     /* Releases */
@@ -932,6 +1036,14 @@
         flex-wrap: wrap;
     }
     
+    .release-tag-link {
+        text-decoration: none;
+    }
+    
+    .release-tag-link:hover .release-tag {
+        background: #00e6b8;
+    }
+    
     .release-tag {
         background: var(--primary, #00d4aa);
         color: #000;
@@ -939,12 +1051,37 @@
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
+        transition: background 0.15s;
+    }
+    
+    .release-name-link {
+        font-size: 0.875rem;
+        color: var(--text-primary, #fff);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+    
+    .release-name-link:hover {
+        color: var(--primary, #00d4aa);
     }
     
     .release-name {
         font-size: 0.875rem;
         color: var(--text-primary, #fff);
         font-weight: 500;
+    }
+    
+    .release-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+        flex-wrap: wrap;
+    }
+    
+    .btn-sm {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.75rem;
     }
     
     .prerelease-badge {
@@ -1005,83 +1142,20 @@
         color: rgba(0,0,0,0.6);
     }
     
-    /* Contributors */
-    .contributors-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .contributor-row {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.75rem;
-        background: var(--bg-elevated, #2b2b2b);
-        border-radius: 10px;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        border: 1px solid transparent;
-    }
-    
-    .contributor-row:hover {
-        border-color: var(--primary, #00d4aa);
-        background: var(--bg-card, #1a1a1a);
-    }
-    
-    .contributor-row.featured {
-        background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), rgba(0, 212, 170, 0.05));
-        border-color: var(--primary, #00d4aa);
-    }
-    
-    .contributor-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-    
-    .contributor-info {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .contributor-name {
-        display: block;
-        font-weight: 600;
-        color: var(--text-primary, #fff);
-        font-size: 0.9rem;
-    }
-    
-    .contributor-role {
-        font-size: 0.75rem;
-        color: var(--text-muted, #666);
-    }
-    
-    .contributor-stats {
-        text-align: right;
-    }
-    
-    .contrib-count {
-        display: block;
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--primary, #00d4aa);
-    }
-    
-    .contrib-label {
-        font-size: 0.7rem;
-        color: var(--text-muted, #666);
-    }
-    
-    /* Quick Links */
+    /* Quick Links - 5 columns */
     .quick-links {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 0.75rem;
     }
     
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
+        .quick-links {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    
+    @media (max-width: 500px) {
         .quick-links {
             grid-template-columns: repeat(2, 1fr);
         }
@@ -1146,5 +1220,56 @@
         font-size: 0.875rem;
         text-align: center;
         padding: 1rem;
+    }
+    
+    /* Docs CTA */
+    .docs-cta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), rgba(0, 212, 170, 0.02));
+        border: 1px solid rgba(0, 212, 170, 0.3);
+    }
+    
+    .cta-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .cta-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+    
+    .cta-text h3 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .cta-text p {
+        font-size: 0.8125rem;
+        color: var(--text-secondary, #a0a0a0);
+        margin: 0;
+    }
+    
+    .cta-button {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    
+    @media (max-width: 600px) {
+        .docs-cta {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .cta-content {
+            flex-direction: column;
+        }
     }
 </style>

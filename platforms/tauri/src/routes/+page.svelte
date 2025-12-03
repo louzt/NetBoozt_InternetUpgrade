@@ -550,7 +550,9 @@
             {:else if activeTab === 'docs'}
                 <DocsTab />
             {:else if activeTab === 'github'}
-                <GitHubIntegration />
+                <GitHubIntegration on:navigate={(e) => {
+                    activeTab = e.detail.tab;
+                }} />
             {:else if activeTab === 'reports'}
                 <ReportsTab />
             {:else if activeTab === 'devtools'}

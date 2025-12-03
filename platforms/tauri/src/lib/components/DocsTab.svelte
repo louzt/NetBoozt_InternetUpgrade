@@ -9,6 +9,7 @@
     let activeSection = 'quickstart';
     
     const sections = [
+        { id: 'readme', name: 'README', icon: '📄' },
         { id: 'quickstart', name: 'Inicio Rápido', icon: '🚀' },
         { id: 'dns', name: 'DNS', icon: '🌐' },
         { id: 'optimize', name: 'Optimizaciones', icon: '⚡' },
@@ -16,6 +17,22 @@
         { id: 'troubleshoot', name: 'Solución de Problemas', icon: '🔧' },
         { id: 'glossary', name: 'Glosario', icon: '📖' }
     ];
+    
+    let readmeContent = '';
+    let readmeLoading = true;
+    let readmeError = '';
+    
+    async function fetchReadme() {
+        try {
+            const res = await fetch('https://raw.githubusercontent.com/louzt/NetBoozt_InternetUpgrade/main/README.md');
+            if (!res.ok) throw new Error('No se pudo cargar');
+            readmeContent = await res.text();
+        } catch (e) {
+            readmeError = 'No se pudo cargar el README. Verifica tu conexión.';
+        } finally {
+            readmeLoading = false;
+        }
+    }
     
     function scrollToSection(sectionId: string) {
         const element = document.getElementById(`doc-${sectionId}`);
@@ -51,6 +68,7 @@
     }
     
     onMount(() => {
+        fetchReadme();
         if (contentContainer) {
             contentContainer.addEventListener('scroll', handleScroll);
             return () => contentContainer.removeEventListener('scroll', handleScroll);
@@ -82,6 +100,39 @@
     </nav>
     
     <div class="docs-content" bind:this={contentContainer}>
+        <!-- README from GitHub -->
+        <article class="doc-article" id="doc-readme">
+            <h1>📄 README de GitHub</h1>
+            
+            <section class="doc-section">
+                <div class="readme-actions">
+                    <a href="https://github.com/louzt/NetBoozt_InternetUpgrade" target="_blank" class="btn-readme">
+                        <span>🔗</span> Ver en GitHub
+                    </a>
+                    <a href="https://github.com/louzt/NetBoozt_InternetUpgrade/releases" target="_blank" class="btn-readme">
+                        <span>📦</span> Releases
+                    </a>
+                </div>
+                
+                {#if readmeLoading}
+                    <div class="readme-loading">
+                        <div class="spinner"></div>
+                        <span>Cargando README...</span>
+                    </div>
+                {:else if readmeError}
+                    <div class="readme-error">
+                        <span>⚠️</span>
+                        <p>{readmeError}</p>
+                        <button class="btn-retry" on:click={fetchReadme}>Reintentar</button>
+                    </div>
+                {:else}
+                    <div class="readme-content">
+                        <pre class="readme-raw">{readmeContent}</pre>
+                    </div>
+                {/if}
+            </section>
+        </article>
+        
         <!-- Quickstart -->
         <article class="doc-article" id="doc-quickstart">
             <h1>🚀 Inicio Rápido</h1>
@@ -968,5 +1019,109 @@ netsh winsock reset
         .docs-nav-item {
             padding: 0.5rem 0.75rem;
         }
+    }
+    
+    /* README Section */
+    .readme-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-readme {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        background: var(--bg-elevated, #2b2b2b);
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 8px;
+        color: var(--text-secondary, #a0a0a0);
+        font-size: 0.8125rem;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+    
+    .btn-readme:hover {
+        background: var(--primary, #00d4aa);
+        color: #000;
+        border-color: var(--primary, #00d4aa);
+    }
+    
+    .readme-loading {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 2rem;
+        color: var(--text-muted, #666);
+    }
+    
+    .readme-loading .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--border, #3d3d3d);
+        border-top-color: var(--primary, #00d4aa);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .readme-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        padding: 2rem;
+        background: rgba(255, 107, 107, 0.1);
+        border: 1px solid rgba(255, 107, 107, 0.3);
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .readme-error span {
+        font-size: 2rem;
+    }
+    
+    .readme-error p {
+        color: var(--text-secondary, #a0a0a0);
+        margin: 0;
+    }
+    
+    .btn-retry {
+        padding: 0.5rem 1rem;
+        background: var(--primary, #00d4aa);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    
+    .btn-retry:hover {
+        background: #00e6b8;
+    }
+    
+    .readme-content {
+        background: var(--bg-elevated, #1a1a1a);
+        border: 1px solid var(--border, #2d2d2d);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .readme-raw {
+        margin: 0;
+        padding: 1.5rem;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 0.75rem;
+        line-height: 1.6;
+        color: var(--text-secondary, #a0a0a0);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 600px;
+        overflow-y: auto;
     }
 </style>

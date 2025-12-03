@@ -599,6 +599,47 @@ pub async fn run_windows_network_troubleshooter() -> Result<String, String> {
     }
 }
 
+/// Abrir herramienta del sistema de Windows
+#[tauri::command]
+pub async fn open_system_tool(tool: String) -> Result<String, String> {
+    log::info!("Abriendo herramienta del sistema: {}", tool);
+    
+    #[cfg(windows)]
+    {
+        use std::process::Command as StdCommand;
+        
+        // Verificar que sea una herramienta permitida
+        let allowed_tools = vec![
+            "ncpa.cpl",      // Conexiones de red
+            "devmgmt.msc",   // Administrador de dispositivos
+            "cmd",           // Command Prompt
+            "powershell",    // PowerShell
+            "control",       // Panel de control
+            "services.msc",  // Servicios
+            "eventvwr.msc",  // Visor de eventos
+            "resmon",        // Monitor de recursos
+            "perfmon",       // Monitor de rendimiento
+        ];
+        
+        if !allowed_tools.contains(&tool.as_str()) {
+            return Err(format!("Herramienta no permitida: {}", tool));
+        }
+        
+        StdCommand::new("cmd")
+            .args(["/c", "start", "", &tool])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map_err(|e| format!("Error abriendo {}: {}", tool, e))?;
+        
+        Ok(format!("Herramienta {} iniciada", tool))
+    }
+    
+    #[cfg(not(windows))]
+    {
+        Err("Esta función solo está disponible en Windows".to_string())
+    }
+}
+
 /// Resultado de resolución DNS
 #[derive(Debug, serde::Serialize)]
 pub struct DnsResolutionResult {
