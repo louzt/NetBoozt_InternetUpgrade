@@ -7,6 +7,13 @@
     import { onMount, onDestroy } from 'svelte';
     import { invoke, listen } from '$lib/tauri-bridge';
     
+    // SvelteKit page data - ignorar para evitar warnings
+    export let data: Record<string, unknown> = {};
+    // @ts-ignore - SvelteKit pasa params automáticamente
+    let { params } = $$restProps || {};
+    $: params; // evitar unused warning
+    $: data; // evitar unused warning
+    
     // Components
     import Toast from '$lib/components/Toast.svelte';
     import ToastNotification from '$lib/components/ToastNotification.svelte';
@@ -20,12 +27,12 @@
     import type { Alert as StoreAlert } from '$lib/stores/alertStore';
     
     // Tabs
-    import { DashboardTab, DNSTab, OptimizeTab, MonitorTab, AlertsTab, SettingsTab, ReportsTab } from '$lib/components/tabs';
+    import { DashboardTab, AlertsTab, SettingsTab, ReportsTab, DevUtilitiesTab } from '$lib/components/tabs';
     import DocsTab from '$lib/components/DocsTab.svelte';
     import GitHubIntegration from '$lib/components/GitHubIntegration.svelte';
     
     type UnlistenFn = () => void;
-    type TabType = 'dashboard' | 'dns' | 'optimize' | 'monitor' | 'alerts' | 'settings' | 'docs' | 'github' | 'reports';
+    type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'reports' | 'devtools';
     
     // Interfaces
     interface NetworkAdapter { name: string; description: string; status: string; link_speed: string; mac_address: string; }
@@ -86,6 +93,51 @@
         duration: a.duration
     }));
     
+    // ============ HELPERS ============
+    /**
+     * Selecciona el mejor adaptador: prioriza adaptadores físicos reales
+     * Excluye adaptadores virtuales (Hyper-V, VirtualBox, VMware)
+     */
+    function selectBestAdapter(adapters: NetworkAdapter[]): string {
+        // Palabras clave de adaptadores virtuales a evitar
+        const virtualKeywords = ['virtual', 'hyper-v', 'vmware', 'virtualbox', 'loopback', 'bluetooth', 'wan miniport'];
+        
+        // Filtrar adaptadores reales
+        const realAdapters = adapters.filter(a => {
+            const desc = (a.description || '').toLowerCase();
+            const name = a.name.toLowerCase();
+            return !virtualKeywords.some(v => desc.includes(v) || name.includes(v));
+        });
+        
+        // Si no hay adaptadores reales, usar todos
+        const candidates = realAdapters.length > 0 ? realAdapters : adapters;
+        
+        // Prioridad: 1) Wi-Fi activo con buena señal, 2) Ethernet físico, 3) primero disponible
+        // Nota: En laptops, Wi-Fi suele ser el principal
+        const wifiAdapter = candidates.find(a => 
+            a.name.toLowerCase().includes('wi-fi') || 
+            a.name.toLowerCase().includes('wifi') ||
+            a.description?.toLowerCase().includes('wireless')
+        );
+        
+        // Ethernet físico (no "Ethernet 2" que suele ser virtual)
+        const ethernetAdapter = candidates.find(a => {
+            const name = a.name.toLowerCase();
+            const desc = (a.description || '').toLowerCase();
+            return (name === 'ethernet' || desc.includes('realtek') || desc.includes('intel')) &&
+                   !name.includes('ethernet 2') && !name.includes('ethernet 3');
+        });
+        
+        // Si hay Ethernet físico con Realtek/Intel, usarlo
+        if (ethernetAdapter) return ethernetAdapter.name;
+        
+        // Si hay Wi-Fi, usarlo
+        if (wifiAdapter) return wifiAdapter.name;
+        
+        // Último recurso: primer adaptador
+        return candidates[0]?.name || adapters[0]?.name || '';
+    }
+    
     // ============ LIFECYCLE ============
     onMount(async () => {
         await loadInitialData();
@@ -111,7 +163,8 @@
             adapters = adapterResult;
             tcpSettings = settingsResult;
             if (adapters.length > 0) {
-                selectedAdapter = adapters[0].name;
+                // Priorizar Ethernet sobre Wi-Fi (más estable)
+                selectedAdapter = selectBestAdapter(adapters);
                 // Auto-iniciar monitoreo
                 await startMonitoringAuto();
             }
@@ -367,12 +420,32 @@
         terminalTab = 'problems';
     }
     
+    async function openCLIManager() {
+        // Mostrar mensaje en terminal flotante
+        terminalLogs.info('🖥️ Abriendo CLI Manager en ventana externa...');
+        showTerminal = true;
+        terminalTab = 'terminal';
+        
+        try {
+            // Usar comando Rust para abrir CLI con elevación
+            const result = await invoke<string>('open_cli_manager');
+            
+            terminalLogs.info('✅ ' + result);
+            terminalLogs.info('💡 El CLI Manager requiere permisos de administrador para algunas operaciones');
+            
+            showToast('success', 'CLI Manager abierto en nueva ventana');
+        } catch (e) {
+            terminalLogs.error(`❌ Error abriendo CLI: ${e}`);
+            showToast('error', `Error abriendo CLI Manager: ${e}`);
+        }
+    }
+
     function handleTabChange(e: CustomEvent<TabType>) { activeTab = e.detail; }
     
     const tabTitles: Record<TabType, string> = {
-        dashboard: 'Dashboard', dns: 'Configuración DNS', optimize: 'Optimizaciones TCP/IP',
-        monitor: 'Monitor en Tiempo Real', alerts: 'Sistema de Alertas', settings: 'Configuración',
-        docs: 'Documentación', github: 'GitHub', reports: 'Reportes de Diagnóstico'
+        dashboard: 'Dashboard',
+        alerts: 'Sistema de Alertas', settings: 'Configuración',
+        docs: 'Documentación', github: 'GitHub', reports: 'Reportes de Diagnóstico', devtools: 'Dev Utilities'
     };
 </script>
 
@@ -395,6 +468,7 @@
         on:tabChange={handleTabChange}
         on:toggleCollapse={() => sidebarCollapsed = !sidebarCollapsed}
         on:openProblems={openProblemsPanel}
+        on:openCLI={openCLIManager}
     />
     
     <!-- Main -->
@@ -414,19 +488,24 @@
         
         <div class="content">
             {#if activeTab === 'dashboard'}
-                <DashboardTab {loading} {adapters} {selectedAdapter} {diagnostic} {diagnosing} {downloadRate} {uploadRate} {latency} {uptime} on:diagnose={runDiagnostic} />
-            {:else if activeTab === 'dns'}
-                <DNSTab {loading} {currentDNS} {currentTier} {dnsHealthMap} {settingDNS} {autoFailoverEnabled}
-                    on:setDNS={setDNS} on:resetDNS={resetDNS} on:flushDNS={flushDNS}
-                    on:toggleFailover={() => { autoFailoverEnabled = !autoFailoverEnabled; showToast('info', `Auto-failover ${autoFailoverEnabled ? 'activado' : 'desactivado'}`); }}
+                <DashboardTab 
+                    {loading} 
+                    {adapters} 
+                    {selectedAdapter} 
+                    {diagnostic} 
+                    {diagnosing} 
+                    {downloadRate} 
+                    {uploadRate} 
+                    {latency} 
+                    {uptime}
+                    {packetsSent}
+                    {packetsRecv}
+                    {totalErrors}
+                    {totalDrops}
+                    {monitoringActive}
+                    on:diagnose={runDiagnostic}
+                    on:toggleMonitoring={toggleMonitoring}
                 />
-            {:else if activeTab === 'optimize'}
-                <OptimizeTab {loading} {optimizing} {tcpSettings} {dryRunMode}
-                    on:applyProfile={applyProfile} on:reset={resetOptimizations}
-                    on:toggleDryRun={() => { dryRunMode = !dryRunMode; showToast('info', `Dry-Run ${dryRunMode ? 'activado' : 'desactivado'}`); }}
-                />
-            {:else if activeTab === 'monitor'}
-                <MonitorTab {loading} {monitoringActive} {downloadRate} {uploadRate} {latency} {packetsSent} {packetsRecv} {totalErrors} {totalDrops} on:toggle={toggleMonitoring} />
             {:else if activeTab === 'alerts'}
                 <AlertsTab {loading} {alerts} bind:alertThresholds />
             {:else if activeTab === 'settings'}
@@ -437,6 +516,8 @@
                 <GitHubIntegration />
             {:else if activeTab === 'reports'}
                 <ReportsTab />
+            {:else if activeTab === 'devtools'}
+                <DevUtilitiesTab />
             {/if}
         </div>
     </main>

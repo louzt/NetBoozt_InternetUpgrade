@@ -6,3 +6,4 @@ export { default as MonitorTab } from './MonitorTab.svelte';
 export { default as AlertsTab } from './AlertsTab.svelte';
 export { default as SettingsTab } from './SettingsTab.svelte';
 export { default as ReportsTab } from './ReportsTab.svelte';
+export { default as DevUtilitiesTab } from './DevUtilitiesTab.svelte';

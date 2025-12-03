@@ -3,7 +3,8 @@
     By LOUST
 -->
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
+    import { isTauriAvailable } from '$lib/tauri-bridge';
     import AnimatedLogo from './AnimatedLogo.svelte';
     import LogoIcon from './LogoIcon.svelte';
     import Icon from './Icon.svelte';
@@ -17,13 +18,19 @@
     
     const dispatch = createEventDispatcher();
     
-    type TabType = 'dashboard' | 'dns' | 'monitor' | 'alerts' | 'settings' | 'docs' | 'github' | 'problems' | 'reports';
+    // Detectar modo web (mock)
+    let isWebMode = false;
     
+    onMount(() => {
+        isWebMode = !isTauriAvailable();
+    });
+    
+type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'problems' | 'reports' | 'devtools';
+
     const navItems: { id: TabType; icon: string; label: string }[] = [
         { id: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
-        { id: 'dns', icon: 'globe', label: 'DNS' },
-        { id: 'monitor', icon: 'activity', label: 'Monitor' },
         { id: 'reports', icon: 'clipboard-list', label: 'Reportes' },
+        { id: 'devtools', icon: 'terminal', label: 'Dev Tools' },
         { id: 'alerts', icon: 'bell', label: 'Alertas' },
         { id: 'docs', icon: 'book-open', label: 'Docs' },
         { id: 'github', icon: 'github', label: 'GitHub' },
@@ -45,15 +52,14 @@
         dispatch('openProblems');
     }
     
+    function openCLI() {
+        dispatch('openCLI');
+    }
+    
     $: unresolvedAlerts = alerts.filter(a => !a.resolved).length;
 </script>
 
 <aside class="sidebar" class:collapsed>
-    <!-- Collapse Toggle -->
-    <button class="collapse-btn" on:click={() => dispatch('toggleCollapse')} aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
-        <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={12} />
-    </button>
-    
     <!-- Logo -->
     <div class="logo-section">
         <LogoIcon size={collapsed ? 28 : 32} />
@@ -93,16 +99,38 @@
         </button>
     {/if}
     
-    <!-- Status -->
+    <!-- CLI Manager Button -->
+    <button class="cli-btn" on:click={openCLI} title="Abrir CLI Manager (terminal avanzada)">
+        <Icon name="terminal" size={16} />
+        {#if !collapsed}
+            <span class="cli-text">CLI Manager</span>
+        {/if}
+    </button>
+    
+    <!-- Status with Collapse Toggle -->
     <div class="sidebar-status">
-        <div class="status-indicator" class:active={monitoringActive}>
-            <span class="status-dot"></span>
-            {#if !collapsed}
-                <span>{monitoringActive ? 'Monitoreando' : 'Detenido'}</span>
-            {/if}
+        <div class="status-row">
+            <div class="status-indicator" class:active={monitoringActive}>
+                <span class="status-dot"></span>
+                {#if !collapsed}
+                    <span>{monitoringActive ? 'Monitoreando' : 'Detenido'}</span>
+                {/if}
+            </div>
+            <button class="collapse-btn" on:click={() => dispatch('toggleCollapse')} aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'} title={collapsed ? 'Expandir' : 'Colapsar'}>
+                <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={12} />
+            </button>
         </div>
         {#if monitoringActive && !collapsed}
             <span class="uptime-display">{formatUptime(uptime)}</span>
+        {/if}
+    </div>
+    
+    <!-- Connection Mode Indicator -->
+    <div class="connection-indicator" class:collapsed class:web-mode={isWebMode} class:tauri-mode={!isWebMode} title={isWebMode ? 'Ejecutándose en modo web con datos simulados' : 'Conectado a Tauri backend'}>
+        <span class="connection-dot" class:pulse={!isWebMode}></span>
+        {#if !collapsed}
+            <span class="connection-text">{isWebMode ? 'Modo Web' : 'Tauri'}</span>
+            <span class="connection-badge">{isWebMode ? 'Mock' : 'OK'}</span>
         {/if}
     </div>
     
@@ -120,12 +148,15 @@
 <style>
     .sidebar {
         width: 220px;
-        background: var(--bg-card, #1a1a1a);
+        background: rgba(26, 26, 26, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         display: flex;
         flex-direction: column;
-        border-right: 1px solid var(--border, #2d2d2d);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
         position: relative;
         transition: width 0.2s ease;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     }
     
     .sidebar.collapsed {
@@ -133,29 +164,24 @@
     }
     
     .collapse-btn {
-        position: absolute;
-        top: 50%;
-        right: -14px;
-        transform: translateY(-50%);
-        width: 14px;
-        height: 48px;
-        border-radius: 0 6px 6px 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
         background: var(--bg-elevated, #2b2b2b);
         border: 1px solid var(--border, #3d3d3d);
-        border-left: none;
         color: var(--text-muted, #666);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 10;
         transition: all 0.2s;
+        flex-shrink: 0;
     }
     
     .collapse-btn:hover {
         background: var(--primary, #00d4aa);
         color: #000;
-        width: 18px;
+        border-color: var(--primary, #00d4aa);
     }
     
     .logo-section {
@@ -163,8 +189,8 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1.25rem;
-        border-bottom: 1px solid var(--border, #2d2d2d);
         overflow: hidden;
+        background: rgba(0, 212, 170, 0.03);
     }
     
     .collapsed .logo-section {
@@ -204,13 +230,14 @@
     }
     
     .nav-item:hover {
-        background: var(--bg-elevated, #2b2b2b);
+        background: rgba(255, 255, 255, 0.08);
         color: var(--text-primary, #fff);
     }
     
     .nav-item.active {
-        background: var(--primary, #00d4aa);
+        background: linear-gradient(135deg, var(--primary, #00d4aa), #00b894);
         color: #000;
+        box-shadow: 0 4px 15px rgba(0, 212, 170, 0.25);
     }
     
     .nav-label {
@@ -277,14 +304,58 @@
         text-align: center;
     }
     
+    /* CLI Manager Button */
+    .cli-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0.75rem;
+        padding: 0.625rem 0.75rem;
+        background: rgba(0, 212, 170, 0.1);
+        border: 1px solid rgba(0, 212, 170, 0.3);
+        border-radius: 8px;
+        color: var(--primary, #00d4aa);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .collapsed .cli-btn {
+        justify-content: center;
+        margin: 0.5rem;
+        padding: 0.625rem;
+    }
+    
+    .cli-btn:hover {
+        background: rgba(0, 212, 170, 0.2);
+        border-color: var(--primary, #00d4aa);
+    }
+    
+    .cli-text {
+        flex: 1;
+        text-align: left;
+    }
+    
     .sidebar-status {
         padding: 0.75rem 1rem;
-        border-top: 1px solid var(--border, #2d2d2d);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(0, 0, 0, 0.15);
     }
     
     .collapsed .sidebar-status {
         padding: 0.75rem 0.5rem;
-        text-align: center;
+    }
+    
+    .status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    
+    .collapsed .status-row {
+        flex-direction: column;
+        gap: 0.5rem;
     }
     
     .status-indicator {
@@ -329,13 +400,82 @@
         display: block;
     }
     
+    /* Connection Mode Indicator */
+    .connection-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0 0.75rem 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+    }
+    
+    .connection-indicator.collapsed {
+        justify-content: center;
+        margin: 0 0.5rem 0.5rem;
+        padding: 0.5rem;
+    }
+    
+    .connection-indicator.web-mode {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        color: #ffc107;
+    }
+    
+    .connection-indicator.tauri-mode {
+        background: rgba(0, 212, 170, 0.08);
+        border: 1px solid rgba(0, 212, 170, 0.25);
+        color: var(--primary, #00d4aa);
+    }
+    
+    .connection-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    
+    .web-mode .connection-dot {
+        background: #ffc107;
+    }
+    
+    .tauri-mode .connection-dot {
+        background: var(--primary, #00d4aa);
+    }
+    
+    .connection-dot.pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    .connection-text {
+        flex: 1;
+    }
+    
+    .connection-badge {
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+    
+    .web-mode .connection-badge {
+        background: rgba(255, 193, 7, 0.2);
+    }
+    
+    .tauri-mode .connection-badge {
+        background: rgba(0, 212, 170, 0.2);
+    }
+    
     .sidebar-footer {
         padding: 0.75rem 1rem;
-        border-top: 1px solid var(--border, #2d2d2d);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
         font-size: 0.7rem;
         color: var(--text-muted, #666);
         display: flex;
         justify-content: space-between;
+        background: rgba(0, 0, 0, 0.1);
     }
     
     .collapsed .sidebar-footer {
