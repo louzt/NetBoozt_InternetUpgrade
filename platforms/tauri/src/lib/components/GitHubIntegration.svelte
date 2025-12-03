@@ -37,23 +37,25 @@
         profileUrl: string;
     }
     
-    // Versiones del proyecto
+    // Versiones del proyecto con lenguajes asociados
     const VERSIONS = [
         {
             name: 'Tauri (Rust + Svelte)',
-            version: '3.0',
-            status: 'stable',
+            version: '3.0.0',
+            status: 'beta',
             icon: '⚡',
             description: 'Versión nativa multiplataforma. Inicio instantáneo (<1s), ~5MB de tamaño.',
-            features: ['Inicio ultra-rápido', 'Bajo consumo RAM', 'Multiplataforma nativa', 'UI moderna con Svelte']
+            features: ['Inicio ultra-rápido', 'Bajo consumo RAM', 'Multiplataforma nativa', 'UI moderna con Svelte'],
+            languages: ['Rust', 'TypeScript', 'Svelte', 'CSS', 'HTML']
         },
         {
             name: 'Python (CustomTkinter)',
-            version: '2.2',
-            status: 'legacy',
+            version: '2.2.1',
+            status: 'stable',
             icon: '🐍',
-            description: 'Versión original en Python. Splash visible ~1 min mientras carga dependencias.',
-            features: ['Más features completas', 'CLI interactivo', 'Nuitka build', 'Solo Windows por ahora']
+            description: 'Versión original en Python. Compila con Nuitka a binario nativo.',
+            features: ['Features completas', 'CLI interactivo', 'Nuitka build', 'Solo Windows'],
+            languages: ['Python', 'PowerShell', 'Batchfile']
         }
     ];
     
@@ -309,22 +311,60 @@
             </section>
         {/if}
         
-        <!-- Versiones del Proyecto -->
+        <!-- Versiones del Proyecto con Lenguajes -->
         <section class="card versions-section">
             <div class="card-header">
                 <h2>🚀 Versiones Disponibles</h2>
             </div>
             <div class="versions-grid">
                 {#each VERSIONS as ver}
-                    <div class="version-card" class:stable={ver.status === 'stable'} class:legacy={ver.status === 'legacy'}>
+                    <div class="version-card" class:stable={ver.status === 'stable'} class:beta={ver.status === 'beta'}>
                         <div class="version-header">
                             <span class="version-icon">{ver.icon}</span>
                             <div class="version-info">
                                 <span class="version-name">{ver.name}</span>
-                                <span class="version-tag">v{ver.version} {ver.status === 'stable' ? '✓ Estable' : '📦 Legacy'}</span>
+                                <span class="version-tag">
+                                    v{ver.version}
+                                    {#if ver.status === 'stable'}
+                                        <span class="status-badge stable">✓ Estable</span>
+                                    {:else if ver.status === 'beta'}
+                                        <span class="status-badge beta">🧪 Beta</span>
+                                    {:else}
+                                        <span class="status-badge legacy">📦 Legacy</span>
+                                    {/if}
+                                </span>
                             </div>
                         </div>
                         <p class="version-desc">{ver.description}</p>
+                        
+                        <!-- Lenguajes de esta versión -->
+                        {#if ver.languages && stats?.languages}
+                            <div class="version-languages">
+                                <span class="lang-title">Lenguajes:</span>
+                                <div class="lang-bar-mini">
+                                    {#each ver.languages as lang}
+                                        {@const bytes = stats.languages[lang] || 0}
+                                        {#if bytes > 0}
+                                            <Tooltip text="{lang}: {formatBytes(bytes)}">
+                                                <div 
+                                                    class="lang-seg" 
+                                                    style="flex: {getLanguagePercent(bytes)}; background: {getLanguageColor(lang)};"
+                                                ></div>
+                                            </Tooltip>
+                                        {/if}
+                                    {/each}
+                                </div>
+                                <div class="lang-tags">
+                                    {#each ver.languages as lang}
+                                        <span class="lang-tag" style="--color: {getLanguageColor(lang)}">
+                                            <span class="tag-dot"></span>
+                                            {lang}
+                                        </span>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/if}
+                        
                         <ul class="version-features">
                             {#each ver.features as feat}
                                 <li>{feat}</li>
@@ -588,23 +628,12 @@
         letter-spacing: 0.5px;
     }
     
-    /* Info Row */
-    .info-row {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 1rem;
-    }
-    
-    @media (max-width: 600px) {
-        .info-row {
-            grid-template-columns: 1fr;
-        }
-    }
-    
     .meta-card {
         display: flex;
-        gap: 1.5rem;
+        gap: 2rem;
         padding: 1rem 1.25rem;
+        flex: 1;
+        flex-wrap: wrap;
     }
     
     .meta-item {
@@ -719,10 +748,6 @@
         background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), transparent);
     }
     
-    .version-card.legacy {
-        border-color: var(--border, #3d3d3d);
-    }
-    
     .version-header {
         display: flex;
         align-items: flex-start;
@@ -750,10 +775,6 @@
         color: var(--primary, #00d4aa);
     }
     
-    .version-card.legacy .version-tag {
-        color: var(--text-muted, #666);
-    }
-    
     .version-desc {
         font-size: 0.8rem;
         color: var(--text-secondary, #a0a0a0);
@@ -770,6 +791,86 @@
     
     .version-features li {
         margin-bottom: 0.25rem;
+    }
+    
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .status-badge.stable {
+        background: rgba(0, 212, 170, 0.2);
+        color: var(--primary, #00d4aa);
+    }
+    
+    .status-badge.beta {
+        background: rgba(253, 203, 110, 0.2);
+        color: #fdcb6e;
+    }
+    
+    .status-badge.legacy {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-muted, #666);
+    }
+    
+    /* Version languages */
+    .version-languages {
+        margin: 0.75rem 0;
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+    
+    .lang-title {
+        font-size: 0.65rem;
+        color: var(--text-muted, #666);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .lang-bar-mini {
+        display: flex;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.05);
+        margin-bottom: 0.5rem;
+    }
+    
+    .lang-seg {
+        height: 100%;
+        min-width: 4px;
+    }
+    
+    .lang-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    
+    .lang-tag {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.65rem;
+        color: var(--text-secondary, #a0a0a0);
+        padding: 0.15rem 0.4rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    
+    .tag-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color);
     }
     
     /* Releases */

@@ -99,40 +99,39 @@ type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'proble
         </button>
     {/if}
     
-    <!-- CLI Manager Button -->
-    <button class="cli-btn" on:click={openCLI} title="Abrir CLI Manager (terminal avanzada)">
-        <Icon name="terminal" size={16} />
-        {#if !collapsed}
-            <span class="cli-text">CLI Manager</span>
-        {/if}
-    </button>
-    
-    <!-- Status with Collapse Toggle -->
+    <!-- Status Section -->
     <div class="sidebar-status">
-        <div class="status-row">
-            <div class="status-indicator" class:active={monitoringActive}>
-                <span class="status-dot"></span>
-                {#if !collapsed}
-                    <span>{monitoringActive ? 'Monitoreando' : 'Detenido'}</span>
-                {/if}
-            </div>
-            <button class="collapse-btn" on:click={() => dispatch('toggleCollapse')} aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'} title={collapsed ? 'Expandir' : 'Colapsar'}>
-                <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={12} />
-            </button>
+        <div class="status-indicator" class:active={monitoringActive}>
+            <span class="status-dot"></span>
+            {#if !collapsed}
+                <span>{monitoringActive ? 'Monitoreando' : 'Detenido'}</span>
+            {/if}
         </div>
         {#if monitoringActive && !collapsed}
             <span class="uptime-display">{formatUptime(uptime)}</span>
         {/if}
     </div>
     
-    <!-- Connection Mode Indicator -->
-    <div class="connection-indicator" class:collapsed class:web-mode={isWebMode} class:tauri-mode={!isWebMode} title={isWebMode ? 'Ejecutándose en modo web con datos simulados' : 'Conectado a Tauri backend'}>
-        <span class="connection-dot" class:pulse={!isWebMode}></span>
-        {#if !collapsed}
-            <span class="connection-text">{isWebMode ? 'Modo Web' : 'Tauri'}</span>
-            <span class="connection-badge">{isWebMode ? 'Mock' : 'OK'}</span>
-        {/if}
+    <!-- Connection + Collapse Row -->
+    <div class="connection-row" class:collapsed>
+        <div class="connection-indicator" class:web-mode={isWebMode} class:tauri-mode={!isWebMode} title={isWebMode ? 'Modo web (datos simulados)' : 'Tauri backend conectado'}>
+            <span class="connection-dot" class:pulse={!isWebMode}></span>
+            {#if !collapsed}
+                <span class="connection-text">{isWebMode ? 'Web' : 'Tauri'}</span>
+            {/if}
+        </div>
+        <button class="collapse-btn" on:click={() => dispatch('toggleCollapse')} title={collapsed ? 'Expandir' : 'Colapsar'}>
+            <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={12} />
+        </button>
     </div>
+    
+    <!-- CLI Manager Button -->
+    <button class="cli-btn" on:click={openCLI} title="Abrir CLI Manager">
+        <Icon name="terminal" size={16} />
+        {#if !collapsed}
+            <span class="cli-text">CLI Manager</span>
+        {/if}
+    </button>
     
     <!-- Footer -->
     <div class="sidebar-footer">
@@ -304,58 +303,14 @@ type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'proble
         text-align: center;
     }
     
-    /* CLI Manager Button */
-    .cli-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0.5rem 0.75rem;
-        padding: 0.625rem 0.75rem;
-        background: rgba(0, 212, 170, 0.1);
-        border: 1px solid rgba(0, 212, 170, 0.3);
-        border-radius: 8px;
-        color: var(--primary, #00d4aa);
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .collapsed .cli-btn {
-        justify-content: center;
-        margin: 0.5rem;
-        padding: 0.625rem;
-    }
-    
-    .cli-btn:hover {
-        background: rgba(0, 212, 170, 0.2);
-        border-color: var(--primary, #00d4aa);
-    }
-    
-    .cli-text {
-        flex: 1;
-        text-align: left;
-    }
-    
     .sidebar-status {
-        padding: 0.75rem 1rem;
+        padding: 0.5rem 1rem;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         background: rgba(0, 0, 0, 0.15);
     }
     
     .collapsed .sidebar-status {
-        padding: 0.75rem 0.5rem;
-    }
-    
-    .status-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-    }
-    
-    .collapsed .status-row {
-        flex-direction: column;
-        gap: 0.5rem;
+        padding: 0.5rem;
     }
     
     .status-indicator {
@@ -400,40 +355,43 @@ type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'proble
         display: block;
     }
     
-    /* Connection Mode Indicator */
+    /* Connection Row - Tauri + Collapse side by side */
+    .connection-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin: 0.5rem 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(0, 212, 170, 0.08);
+        border: 1px solid rgba(0, 212, 170, 0.25);
+        border-radius: 8px;
+    }
+    
+    .connection-row.collapsed {
+        flex-direction: column;
+        padding: 0.5rem;
+        margin: 0.5rem;
+        gap: 0.4rem;
+    }
+    
     .connection-indicator {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        margin: 0 0.75rem 0.5rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: 8px;
         font-size: 0.75rem;
-        transition: all 0.2s;
-    }
-    
-    .connection-indicator.collapsed {
-        justify-content: center;
-        margin: 0 0.5rem 0.5rem;
-        padding: 0.5rem;
+        color: var(--primary, #00d4aa);
     }
     
     .connection-indicator.web-mode {
-        background: rgba(255, 193, 7, 0.1);
-        border: 1px solid rgba(255, 193, 7, 0.3);
         color: #ffc107;
-    }
-    
-    .connection-indicator.tauri-mode {
-        background: rgba(0, 212, 170, 0.08);
-        border: 1px solid rgba(0, 212, 170, 0.25);
-        color: var(--primary, #00d4aa);
     }
     
     .connection-dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
+        background: var(--primary, #00d4aa);
         flex-shrink: 0;
     }
     
@@ -441,31 +399,65 @@ type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'proble
         background: #ffc107;
     }
     
-    .tauri-mode .connection-dot {
-        background: var(--primary, #00d4aa);
-    }
-    
     .connection-dot.pulse {
         animation: pulse 2s infinite;
     }
     
     .connection-text {
-        flex: 1;
-    }
-    
-    .connection-badge {
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        font-size: 0.65rem;
         font-weight: 600;
     }
     
-    .web-mode .connection-badge {
-        background: rgba(255, 193, 7, 0.2);
+    .collapse-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: var(--text-muted, #666);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
     }
     
-    .tauri-mode .connection-badge {
-        background: rgba(0, 212, 170, 0.2);
+    .collapse-btn:hover {
+        background: var(--primary, #00d4aa);
+        color: #000;
+    }
+    
+    /* CLI Manager Button */
+    .cli-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0.75rem;
+        padding: 0.625rem 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border, #3d3d3d);
+        border-radius: 8px;
+        color: var(--text-secondary, #a0a0a0);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .collapsed .cli-btn {
+        justify-content: center;
+        margin: 0.5rem;
+        padding: 0.625rem;
+    }
+    
+    .cli-btn:hover {
+        background: rgba(0, 212, 170, 0.1);
+        border-color: rgba(0, 212, 170, 0.3);
+        color: var(--primary, #00d4aa);
+    }
+    
+    .cli-text {
+        flex: 1;
+        text-align: left;
     }
     
     .sidebar-footer {

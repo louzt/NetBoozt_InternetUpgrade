@@ -347,17 +347,6 @@
 </script>
 
 <div class="dev-utilities">
-    <!-- Header -->
-    <header class="tab-header">
-        <div class="header-info">
-            <Icon name="terminal" size={22} />
-            <div class="header-text">
-                <h2>Dev Utilities</h2>
-                <p>Herramientas de desarrollo y testing de red</p>
-            </div>
-        </div>
-    </header>
-    
     <!-- Navigation Pills -->
     <nav class="section-nav">
         <button 
@@ -879,32 +868,6 @@
         gap: 1.5rem;
         height: 100%;
         overflow: hidden;
-    }
-    
-    /* Header */
-    .tab-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .header-info {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: var(--primary, #00d4aa);
-    }
-    
-    .header-text h2 {
-        margin: 0;
-        font-size: 1.25rem;
-        color: var(--text-primary, #fff);
-    }
-    
-    .header-text p {
-        margin: 0;
-        font-size: 0.75rem;
-        color: var(--text-muted, #666);
     }
     
     /* Navigation */

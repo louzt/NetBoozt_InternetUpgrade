@@ -109,6 +109,10 @@ platforms/tauri/src-tauri/*.dmg
 platforms/tauri/src-tauri/*.AppImage
 platforms/tauri/src-tauri/*.deb
 
+# Private user backgrounds (not committed)
+platforms/tauri/static/backgrounds/private/*
+!platforms/tauri/static/backgrounds/private/.gitkeep
+
 # Tauri debug symbols
 *.dSYM/
 

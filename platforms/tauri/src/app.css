@@ -27,6 +27,9 @@ html, body {
 	background: var(--bg-main);
 	color: var(--text-primary);
 	overflow: hidden;
+	background-size: cover;
+	background-position: center;
+	background-attachment: fixed;
 }
 
 /* Scrollbar styling */

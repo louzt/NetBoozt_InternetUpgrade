@@ -137,22 +137,17 @@
 </script>
 
 <div class="reports-tab">
-    <header class="tab-header">
-        <div class="header-content">
-            <h1>📊 Reportes de Diagnóstico</h1>
-            <p>Historial completo de todos los tests de red realizados</p>
-        </div>
-        <div class="header-actions">
-            <button class="btn btn-secondary" on:click={openImportModal}>
-                <Icon name="upload" size={16} />
-                Importar
-            </button>
-            <button class="btn btn-secondary" on:click={exportHistory} disabled={$diagnosticHistory.length === 0}>
-                <Icon name="download" size={16} />
-                Exportar
-            </button>
-        </div>
-    </header>
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <button class="btn btn-secondary" on:click={openImportModal}>
+            <Icon name="upload" size={16} />
+            Importar
+        </button>
+        <button class="btn btn-secondary" on:click={exportHistory} disabled={$diagnosticHistory.length === 0}>
+            <Icon name="download" size={16} />
+            Exportar
+        </button>
+    </div>
     
     <!-- Estadísticas Generales Mejoradas -->
     {#if stats && (stats.totalTests ?? 0) > 0}
@@ -446,29 +441,9 @@
         padding: 1.5rem;
     }
     
-    .tab-header {
+    .actions-bar {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-    
-    .header-content h1 {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-primary, #fff);
-        margin: 0 0 0.25rem 0;
-    }
-    
-    .header-content p {
-        font-size: 0.875rem;
-        color: var(--text-muted, #666);
-        margin: 0;
-    }
-    
-    .header-actions {
-        display: flex;
+        justify-content: flex-end;
         gap: 0.5rem;
     }
     

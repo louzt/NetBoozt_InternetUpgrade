@@ -177,13 +177,25 @@
     
     // Auto-iniciar monitoreo al cargar la app
     async function startMonitoringAuto() {
-        if (!selectedAdapter || monitoringActive) return;
+        if (!selectedAdapter) return;
+        
+        // Si ya estamos en estado activo localmente, no hacer nada
+        if (monitoringActive) return;
+        
         try {
+            // Primero intentamos detener cualquier monitoreo previo (limpieza)
+            try {
+                await invoke('stop_monitoring');
+            } catch { /* ignorar si no había monitoreo */ }
+            
+            // Ahora iniciamos fresco
             await invoke('start_monitoring', { adapter: selectedAdapter, intervalMs: 1000 });
             monitoringActive = true;
             console.log('📊 Monitoreo automático iniciado para:', selectedAdapter);
         } catch (e) {
             console.warn('No se pudo iniciar monitoreo automático:', e);
+            // Si falló por alguna razón, asegurar estado consistente
+            monitoringActive = false;
         }
     }
     
@@ -348,11 +360,23 @@
                 monitoringActive = false; uptime = 0;
                 showToast('info', 'Monitoreo detenido');
             } else {
+                // Intentar detener cualquier monitoreo previo antes de iniciar
+                try { await invoke('stop_monitoring'); } catch { /* ignorar */ }
+                
                 await invoke('start_monitoring', { adapter: selectedAdapter, intervalMs: 1000 });
                 monitoringActive = true;
                 showToast('success', 'Monitoreo iniciado');
             }
-        } catch (e) { showToast('error', `Error: ${e}`); }
+        } catch (e: any) {
+            // Si dice que ya está activo, sincronizar estado
+            const errorMsg = String(e);
+            if (errorMsg.includes('ya está activo') || errorMsg.includes('already')) {
+                monitoringActive = true;
+                showToast('info', 'Monitoreo sincronizado');
+            } else {
+                showToast('error', `Error: ${e}`);
+            }
+        }
     }
     
     // ============ HELPERS ============
@@ -447,6 +471,16 @@
         alerts: 'Sistema de Alertas', settings: 'Configuración',
         docs: 'Documentación', github: 'GitHub', reports: 'Reportes de Diagnóstico', devtools: 'Dev Utilities'
     };
+    
+    const tabSubtitles: Record<TabType, string> = {
+        dashboard: 'Métricas de red en tiempo real',
+        alerts: 'Notificaciones y advertencias del sistema',
+        settings: 'Personaliza tu experiencia',
+        docs: 'Guías y documentación técnica',
+        github: 'Repositorio, versiones y comunidad',
+        reports: 'Historial de diagnósticos y análisis',
+        devtools: 'Herramientas de desarrollo y testing'
+    };
 </script>
 
 <svelte:head><title>NetBoozt - Network Optimizer</title></svelte:head>
@@ -474,7 +508,10 @@
     <!-- Main -->
     <main class="main">
         <header class="header">
-            <h1>{tabTitles[activeTab]}</h1>
+            <div class="header-title">
+                <h1>{tabTitles[activeTab]}</h1>
+                <span class="header-subtitle">{tabSubtitles[activeTab]}</span>
+            </div>
             <div class="header-actions">
                 {#if selectedAdapter}<span class="adapter-badge">📡 {selectedAdapter}</span>{/if}
                 {#if dryRunMode}<span class="dryrun-badge">🧪 Dry-Run</span>{/if}
@@ -536,7 +573,9 @@
     .app { display: flex; height: 100vh; overflow: hidden; background: var(--bg-main, #0a0a0a); }
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--bg-card, #1a1a1a); border-bottom: 1px solid var(--border, #2d2d2d); }
+    .header-title { display: flex; flex-direction: column; gap: 0.15rem; }
     .header h1 { font-size: 1.375rem; font-weight: 600; color: var(--text-primary, #fff); margin: 0; }
+    .header-subtitle { font-size: 0.7rem; color: var(--text-muted, #666); }
     .header-actions { display: flex; align-items: center; gap: 0.75rem; }
     .adapter-badge { font-size: 0.75rem; color: var(--primary, #00d4aa); background: rgba(0, 212, 170, 0.1); padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid rgba(0, 212, 170, 0.3); }
     .dryrun-badge { font-size: 0.75rem; color: var(--warning, #fdcb6e); background: rgba(253, 203, 110, 0.1); padding: 0.35rem 0.75rem; border-radius: 20px; border: 1px solid rgba(253, 203, 110, 0.3); }
