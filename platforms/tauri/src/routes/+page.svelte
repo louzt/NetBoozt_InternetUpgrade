@@ -30,9 +30,10 @@
     import { DashboardTab, AlertsTab, SettingsTab, ReportsTab, DevUtilitiesTab } from '$lib/components/tabs';
     import DocsTab from '$lib/components/DocsTab.svelte';
     import GitHubIntegration from '$lib/components/GitHubIntegration.svelte';
+    import UpdaterTab from '$lib/components/UpdaterTab.svelte';
     
     type UnlistenFn = () => void;
-    type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'reports' | 'devtools';
+    type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'reports' | 'devtools' | 'updater';
     
     // Interfaces
     interface NetworkAdapter { name: string; description: string; status: string; link_speed: string; mac_address: string; }
@@ -469,7 +470,8 @@
     const tabTitles: Record<TabType, string> = {
         dashboard: 'Dashboard',
         alerts: 'Sistema de Alertas', settings: 'Configuración',
-        docs: 'Documentación', github: 'GitHub', reports: 'Reportes de Diagnóstico', devtools: 'Dev Utilities'
+        docs: 'Documentación', github: 'GitHub', reports: 'Reportes de Diagnóstico', devtools: 'Dev Utilities',
+        updater: 'Actualizaciones'
     };
     
     const tabSubtitles: Record<TabType, string> = {
@@ -479,7 +481,8 @@
         docs: 'Guías y documentación técnica',
         github: 'Repositorio, versiones y comunidad',
         reports: 'Historial de diagnósticos y análisis',
-        devtools: 'Herramientas de desarrollo y testing'
+        devtools: 'Herramientas de desarrollo y testing',
+        updater: 'Verifica y descarga nuevas versiones'
     };
 </script>
 
@@ -553,6 +556,8 @@
                 <GitHubIntegration on:navigate={(e) => {
                     activeTab = e.detail.tab;
                 }} />
+            {:else if activeTab === 'updater'}
+                <UpdaterTab />
             {:else if activeTab === 'reports'}
                 <ReportsTab />
             {:else if activeTab === 'devtools'}

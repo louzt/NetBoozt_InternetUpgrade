@@ -124,6 +124,12 @@ fn main() {
             get_app_version,
             open_cli_manager,
             open_url,
+            
+            // Updater commands
+            commands::updater::download_update,
+            commands::updater::install_update,
+            commands::updater::get_downloads_path,
+            commands::updater::file_exists,
         ])
         
         .run(tauri::generate_context!())

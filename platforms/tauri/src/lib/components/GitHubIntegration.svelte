@@ -761,24 +761,6 @@
         font-size: 0.7rem;
     }
     
-    .loading-mini {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem;
-        color: var(--text-muted, #666);
-        font-size: 0.875rem;
-    }
-    
-    .spinner-sm {
-        width: 16px;
-        height: 16px;
-        border: 2px solid var(--border, #3d3d3d);
-        border-top-color: var(--primary, #00d4aa);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-    
     /* Versions Section */
     .versions-grid {
         display: grid;
@@ -1066,12 +1048,6 @@
         color: var(--primary, #00d4aa);
     }
     
-    .release-name {
-        font-size: 0.875rem;
-        color: var(--text-primary, #fff);
-        font-weight: 500;
-    }
-    
     .release-actions {
         display: flex;
         gap: 0.5rem;
@@ -1213,13 +1189,6 @@
     .btn-ghost:hover {
         background: var(--bg-elevated, #2b2b2b);
         color: var(--text-primary, #fff);
-    }
-    
-    .empty-text {
-        color: var(--text-muted, #666);
-        font-size: 0.875rem;
-        text-align: center;
-        padding: 1rem;
     }
     
     /* Docs CTA */

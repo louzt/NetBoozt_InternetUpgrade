@@ -25,7 +25,7 @@
         isWebMode = !isTauriAvailable();
     });
     
-type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'problems' | 'reports' | 'devtools';
+type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'problems' | 'reports' | 'devtools' | 'updater';
 
     const navItems: { id: TabType; icon: string; label: string }[] = [
         { id: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
@@ -34,6 +34,7 @@ type TabType = 'dashboard' | 'alerts' | 'settings' | 'docs' | 'github' | 'proble
         { id: 'alerts', icon: 'bell', label: 'Alertas' },
         { id: 'docs', icon: 'book-open', label: 'Docs' },
         { id: 'github', icon: 'github', label: 'GitHub' },
+        { id: 'updater', icon: 'download', label: 'Actualizar' },
         { id: 'settings', icon: 'settings', label: 'Config' }
     ];
     
