@@ -88,8 +88,8 @@ node_modules/
 .env
 .env.*
 !.env.example
+# Lock files - using pnpm (pnpm-lock.yaml is committed)
 package-lock.json
-pnpm-lock.yaml
 yarn.lock
 
 # SvelteKit build
