@@ -1,6 +1,6 @@
 [package]
 name = "netboozt"
-version = "3.0.1"
+version = "3.0.2"
 description = "Network Optimization Tool for Windows"
 authors = ["LOUST <opensource@loust.pro>"]
 license = "MIT"
