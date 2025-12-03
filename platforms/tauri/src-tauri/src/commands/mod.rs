@@ -2,6 +2,7 @@
 //!
 //! Re-exports all Tauri commands.
 
+pub mod devtools;
 pub mod diagnostics;
 pub mod monitoring;
 pub mod network;
