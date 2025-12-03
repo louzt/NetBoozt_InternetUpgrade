@@ -161,7 +161,15 @@
     function formatBytes(bytes: number): string {
         const total = Object.values(stats?.languages || {}).reduce((a, b) => a + b, 0);
         if (total === 0) return '0%';
-        return ((bytes / total) * 100).toFixed(1) + '%';
+        const percentage = (bytes / total) * 100;
+        return percentage.toFixed(1) + '%';
+    }
+    
+    // Calcular porcentaje numérico para CSS
+    function getLanguagePercent(bytes: number): number {
+        const total = Object.values(stats?.languages || {}).reduce((a, b) => a + b, 0);
+        if (total === 0) return 0;
+        return Math.max((bytes / total) * 100, 2); // Mínimo 2% para visibilidad
     }
     
     function getLanguageColor(lang: string): string {
@@ -274,23 +282,28 @@
                     <div class="languages-card card">
                         <span class="card-title">Lenguajes</span>
                         <div class="languages-bar">
-                            {#each Object.entries(stats.languages) as [lang, bytes]}
+                            {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]) as [lang, bytes]}
                                 <Tooltip text="{lang}: {formatBytes(bytes)}">
                                     <div 
                                         class="lang-segment" 
-                                        style="width: {formatBytes(bytes)}; background: {getLanguageColor(lang)};"
+                                        style="flex: {getLanguagePercent(bytes)}; background: {getLanguageColor(lang)};"
                                     ></div>
                                 </Tooltip>
                             {/each}
                         </div>
                         <div class="languages-legend">
-                            {#each Object.entries(stats.languages).slice(0, 5) as [lang]}
+                            {#each Object.entries(stats.languages).sort((a, b) => b[1] - a[1]).slice(0, 6) as [lang, bytes]}
                                 <span class="lang-item">
                                     <span class="lang-dot" style="background: {getLanguageColor(lang)}"></span>
-                                    {lang}
+                                    {lang} <span class="lang-percent">{formatBytes(bytes)}</span>
                                 </span>
                             {/each}
                         </div>
+                    </div>
+                {:else}
+                    <div class="languages-card card empty">
+                        <span class="card-title">Lenguajes</span>
+                        <p class="empty-text">No se pudieron cargar los lenguajes</p>
                     </div>
                 {/if}
             </section>
@@ -384,8 +397,16 @@
                 </button>
             </div>
             
-            {#if contributors.length === 0}
-                <p class="empty-text">Cargando contribuidores...</p>
+            {#if loading}
+                <div class="loading-mini">
+                    <div class="spinner-sm"></div>
+                    <span>Cargando contribuidores...</span>
+                </div>
+            {:else if contributors.length === 0}
+                <div class="empty-text">
+                    <p>No se encontraron contribuidores</p>
+                    <button class="btn btn-ghost" on:click={fetchRepoData}>Reintentar</button>
+                </div>
             {:else}
                 <div class="contributors-list">
                     {#each contributors as contrib, i}
@@ -643,6 +664,33 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
+    }
+    
+    .lang-percent {
+        color: var(--text-muted, #666);
+        font-size: 0.65rem;
+    }
+    
+    .languages-card.empty {
+        min-height: 60px;
+    }
+    
+    .loading-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        color: var(--text-muted, #666);
+        font-size: 0.875rem;
+    }
+    
+    .spinner-sm {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border, #3d3d3d);
+        border-top-color: var(--primary, #00d4aa);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
     }
     
     /* Versions Section */
