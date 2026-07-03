@@ -7,7 +7,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -23,7 +23,7 @@
   },
   "productName": "NetBoozt",
   "mainBinaryName": "NetBoozt",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "identifier": "pro.loust.netboozt",
   "plugins": {},
   "app": {

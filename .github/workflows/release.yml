@@ -58,18 +58,16 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          platforms/tauri/src-tauri/target/release/bundle/msi/*.msi
           platforms/tauri/src-tauri/target/release/bundle/nsis/*.exe
         body: |
           ## 🚀 NetBoozt v${{ steps.version.outputs.VERSION }}
-          
+
           ### 📥 Instalación
-          
+
           | Archivo | Descripción |
           |---------|-------------|
-          | `NetBoozt_${{ steps.version.outputs.VERSION }}_x64_en-US.msi` | Instalador MSI (recomendado) |
           | `NetBoozt_${{ steps.version.outputs.VERSION }}_x64-setup.exe` | Instalador NSIS |
-          
+
           ### ⚡ Requisitos
           - Windows 10/11 (x64)
           - Permisos de administrador para optimizaciones TCP/IP
