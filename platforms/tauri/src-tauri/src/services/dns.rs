@@ -408,7 +408,7 @@ pub fn select_best_dns() -> Result<DnsProvider, String> {
     }
 
     best_provider
-        .map(|p| p.clone())
+        .cloned()
         .ok_or_else(|| "No se pudo determinar el mejor DNS".to_string())
 }
 
