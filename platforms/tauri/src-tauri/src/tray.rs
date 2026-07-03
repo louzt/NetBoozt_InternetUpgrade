@@ -70,7 +70,7 @@ pub fn handle_tray_icon_event(app: &AppHandle, event: TrayIconEvent) {
         ..
     } = event
     {
-            show_main_window(app);
+        show_main_window(app);
     }
 }
 

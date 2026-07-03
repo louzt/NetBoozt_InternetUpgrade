@@ -97,18 +97,20 @@ fn linux_open_device_settings() -> Result<bool, String> {
 
 #[cfg(not(windows))]
 fn linux_is_virtual_interface(device: &str, device_type: &str) -> bool {
-    matches!(device_type, "loopback" | "bridge" | "wireguard" | "wifi-p2p")
-        || matches!(
-            device,
-            name if name == "lo"
-                || name.starts_with("docker")
-                || name.starts_with("br-")
-                || name.starts_with("veth")
-                || name.starts_with("virbr")
-                || name.starts_with("wg")
-                || name.starts_with("tun")
-                || name.starts_with("tap")
-        )
+    matches!(
+        device_type,
+        "loopback" | "bridge" | "wireguard" | "wifi-p2p"
+    ) || matches!(
+        device,
+        name if name == "lo"
+            || name.starts_with("docker")
+            || name.starts_with("br-")
+            || name.starts_with("veth")
+            || name.starts_with("virbr")
+            || name.starts_with("wg")
+            || name.starts_with("tun")
+            || name.starts_with("tap")
+    )
 }
 
 #[cfg(not(windows))]
@@ -148,7 +150,13 @@ fn linux_link_speed(device: &str, device_type: &str) -> String {
 #[cfg(not(windows))]
 fn linux_get_network_adapters() -> Result<Vec<NetworkAdapter>, String> {
     let output = Command::new("nmcli")
-        .args(["-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"])
+        .args([
+            "-t",
+            "-f",
+            "DEVICE,TYPE,STATE,CONNECTION",
+            "device",
+            "status",
+        ])
         .output()
         .map_err(|e| format!("Error ejecutando nmcli: {}", e))?;
 

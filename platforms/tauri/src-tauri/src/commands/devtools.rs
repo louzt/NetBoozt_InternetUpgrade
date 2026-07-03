@@ -235,8 +235,14 @@ pub async fn ping_multi(host: String, count: u32) -> Result<PingMultiResult, Str
         let computed_stats = if results.is_empty() {
             (0.0, 0.0, 0.0)
         } else {
-            let min = results.iter().map(|packet| packet.time).fold(f64::INFINITY, f64::min);
-            let max = results.iter().map(|packet| packet.time).fold(f64::NEG_INFINITY, f64::max);
+            let min = results
+                .iter()
+                .map(|packet| packet.time)
+                .fold(f64::INFINITY, f64::min);
+            let max = results
+                .iter()
+                .map(|packet| packet.time)
+                .fold(f64::NEG_INFINITY, f64::max);
             let avg = results.iter().map(|packet| packet.time).sum::<f64>() / results.len() as f64;
             (min, max, avg)
         };
@@ -256,8 +262,8 @@ pub async fn ping_multi(host: String, count: u32) -> Result<PingMultiResult, Str
 
     #[cfg(windows)]
     {
-    let ps_script = format!(
-        r#"
+        let ps_script = format!(
+            r#"
         $results = @()
         $host_target = '{}'
         $count = {}
@@ -295,51 +301,51 @@ pub async fn ping_multi(host: String, count: u32) -> Result<PingMultiResult, Str
             stats = $stats
         }} | ConvertTo-Json -Depth 3
         "#,
-        host, count
-    );
+            host, count
+        );
 
-    let output = powershell_command()
-        .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
-        .output()
-        .map_err(|e| format!("Error ejecutando ping: {}", e))?;
+        let output = powershell_command()
+            .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
+            .output()
+            .map_err(|e| format!("Error ejecutando ping: {}", e))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
-    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
-        let mut results = Vec::new();
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
+            let mut results = Vec::new();
 
-        if let Some(res_array) = json.get("results").and_then(|v| v.as_array()) {
-            for item in res_array {
-                let seq = item.get("seq").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-                let ttl = item.get("ttl").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-                let time = item.get("time").and_then(|v| v.as_f64()).unwrap_or(-1.0);
+            if let Some(res_array) = json.get("results").and_then(|v| v.as_array()) {
+                for item in res_array {
+                    let seq = item.get("seq").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                    let ttl = item.get("ttl").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                    let time = item.get("time").and_then(|v| v.as_f64()).unwrap_or(-1.0);
 
-                if time >= 0.0 {
-                    results.push(PingPacket { seq, ttl, time });
+                    if time >= 0.0 {
+                        results.push(PingPacket { seq, ttl, time });
+                    }
                 }
             }
-        }
 
-        let stats = if let Some(s) = json.get("stats") {
-            PingStats {
-                min: s.get("min").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                max: s.get("max").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                avg: s.get("avg").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                loss: s.get("loss").and_then(|v| v.as_f64()).unwrap_or(0.0),
-            }
+            let stats = if let Some(s) = json.get("stats") {
+                PingStats {
+                    min: s.get("min").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                    max: s.get("max").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                    avg: s.get("avg").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                    loss: s.get("loss").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                }
+            } else {
+                PingStats {
+                    min: 0.0,
+                    max: 0.0,
+                    avg: 0.0,
+                    loss: 100.0,
+                }
+            };
+
+            Ok(PingMultiResult { results, stats })
         } else {
-            PingStats {
-                min: 0.0,
-                max: 0.0,
-                avg: 0.0,
-                loss: 100.0,
-            }
-        };
-
-        Ok(PingMultiResult { results, stats })
-    } else {
-        Err("Error parseando resultados de ping".to_string())
-    }
+            Err("Error parseando resultados de ping".to_string())
+        }
     }
 }
 
@@ -433,9 +439,8 @@ pub async fn traceroute(host: String, max_hops: Option<u32>) -> Result<Tracerout
 
     #[cfg(windows)]
     {
-
-    let ps_script = format!(
-        r#"
+        let ps_script = format!(
+            r#"
         $results = @()
         $output = tracert -h {} -w 1000 {} 2>&1
         
@@ -481,54 +486,54 @@ pub async fn traceroute(host: String, max_hops: Option<u32>) -> Result<Tracerout
         
         @{{ hops = $results }} | ConvertTo-Json -Depth 3
         "#,
-        max, host
-    );
+            max, host
+        );
 
-    let output = powershell_command()
-        .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
-        .output()
-        .map_err(|e| format!("Error ejecutando traceroute: {}", e))?;
+        let output = powershell_command()
+            .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
+            .output()
+            .map_err(|e| format!("Error ejecutando traceroute: {}", e))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+        let stdout = String::from_utf8_lossy(&output.stdout);
 
-    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
-        let mut hops = Vec::new();
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
+            let mut hops = Vec::new();
 
-        if let Some(hops_array) = json.get("hops").and_then(|v| v.as_array()) {
-            for item in hops_array {
-                let hop = item.get("hop").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-                let ip = item
-                    .get("ip")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("*")
-                    .to_string();
-                let hostname = item
-                    .get("hostname")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+            if let Some(hops_array) = json.get("hops").and_then(|v| v.as_array()) {
+                for item in hops_array {
+                    let hop = item.get("hop").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                    let ip = item
+                        .get("ip")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("*")
+                        .to_string();
+                    let hostname = item
+                        .get("hostname")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
 
-                let mut times = Vec::new();
-                if let Some(time_array) = item.get("time").and_then(|v| v.as_array()) {
-                    for t in time_array {
-                        if let Some(time_val) = t.as_f64() {
-                            times.push(time_val);
+                    let mut times = Vec::new();
+                    if let Some(time_array) = item.get("time").and_then(|v| v.as_array()) {
+                        for t in time_array {
+                            if let Some(time_val) = t.as_f64() {
+                                times.push(time_val);
+                            }
                         }
                     }
+
+                    hops.push(TraceHop {
+                        hop,
+                        ip,
+                        hostname,
+                        time: times,
+                    });
                 }
-
-                hops.push(TraceHop {
-                    hop,
-                    ip,
-                    hostname,
-                    time: times,
-                });
             }
-        }
 
-        Ok(TracerouteResult { hops })
-    } else {
-        Err("Error parseando resultados de traceroute".to_string())
-    }
+            Ok(TracerouteResult { hops })
+        } else {
+            Err("Error parseando resultados de traceroute".to_string())
+        }
     }
 }
 
