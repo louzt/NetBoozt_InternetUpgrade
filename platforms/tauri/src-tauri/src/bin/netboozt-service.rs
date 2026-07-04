@@ -7,6 +7,7 @@
 //! Build on Windows with:
 //!     cargo build --release --bin netboozt-service
 
+#[cfg(windows)]
 mod windows_service;
 
 fn main() {
