@@ -48,10 +48,6 @@ windows-service = "0.6"
 # This feature is used for production builds or when a dev server is not specified
 custom-protocol = ["tauri/custom-protocol"]
 
-# Enable this feature to build the Windows service binary:
-#   cargo build --release --features windows-service-binary --bin netboozt-service
-windows-service-binary = []
-
 [[bin]]
 name = "netboozt"
 path = "src/main.rs"
@@ -59,13 +55,3 @@ path = "src/main.rs"
 [[bin]]
 name = "netboozt-headless"
 path = "src/bin/netboozt-headless.rs"
-
-[[bin]]
-name = "netboozt-service"
-path = "src/bin/netboozt-service.rs"
-required-features = ["windows-service-binary"]
-
-# To build the Windows service binary:
-#   cargo build --release --features windows-service-binary --bin netboozt-service
-# The NSIS bundler will NOT include it during normal pnpm tauri build
-# (it has required-features, so it's only compiled when that feature is enabled).
