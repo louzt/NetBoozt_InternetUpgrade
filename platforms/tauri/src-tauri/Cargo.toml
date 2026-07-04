@@ -9,12 +9,6 @@ edition = "2021"
 rust-version = "1.70"
 default-run = "netboozt"
 
-# Disable automatic binary discovery — we only want explicitly-declared [[bin]].
-# This prevents cargo from compiling src/bin/netboozt-service.rs (which has
-# windows-specific code) during normal builds, avoiding dead_code warnings
-# from clippy --all-targets on non-Windows hosts.
-autobins = false
-
 # See more keys at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
@@ -54,6 +48,10 @@ windows-service = "0.6"
 # This feature is used for production builds or when a dev server is not specified
 custom-protocol = ["tauri/custom-protocol"]
 
+# Enable this feature to build the Windows service binary:
+#   cargo build --release --features windows-service-binary --bin netboozt-service
+windows-service-binary = []
+
 [[bin]]
 name = "netboozt"
 path = "src/main.rs"
@@ -62,10 +60,12 @@ path = "src/main.rs"
 name = "netboozt-headless"
 path = "src/bin/netboozt-headless.rs"
 
-# NOTE: netboozt-service is NOT included in [[bin]] because:
-# - Tauri NSIS bundler tries to include ALL [[bin]] outputs.
-# - NSIS derives the service binary name from the windows_service module path,
-#   looking for windows_service.exe instead of netboozt-service.exe.
-# - The service binary is Windows-only; to build it:
-#     cargo build --release --bin netboozt-service
-#   It will appear at target/release/netboozt-service.exe
+[[bin]]
+name = "netboozt-service"
+path = "src/bin/netboozt-service.rs"
+required-features = ["windows-service-binary"]
+
+# To build the Windows service binary:
+#   cargo build --release --features windows-service-binary --bin netboozt-service
+# The NSIS bundler will NOT include it during normal pnpm tauri build
+# (it has required-features, so it's only compiled when that feature is enabled).
