@@ -20,6 +20,19 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+/// Estadísticas crudas de un adaptador de red.
+#[derive(Debug, Default)]
+struct AdapterStats {
+    rx_bytes: u64,
+    tx_bytes: u64,
+    rx_packets: u64,
+    tx_packets: u64,
+    rx_errors: u64,
+    tx_errors: u64,
+    rx_dropped: u64,
+    tx_dropped: u64,
+}
+
 /// Estado del monitoreo
 static MONITORING_ACTIVE: AtomicBool = AtomicBool::new(false);
 
@@ -78,23 +91,23 @@ pub async fn start_monitoring(
 
         while MONITORING_ACTIVE.load(Ordering::SeqCst) {
             let metrics = match get_adapter_metrics(&adapter) {
-                Ok((bytes_recv, bytes_sent, packets_recv, packets_sent, errors, drops)) => {
+                Ok(stats) => {
                     let interval_secs = interval.as_secs_f64();
 
                     // Calcular tasas
-                    let download_bytes = bytes_recv.saturating_sub(prev_bytes_recv);
-                    let upload_bytes = bytes_sent.saturating_sub(prev_bytes_sent);
-                    let pkts_recv_delta = packets_recv.saturating_sub(prev_packets_recv);
-                    let pkts_sent_delta = packets_sent.saturating_sub(prev_packets_sent);
+                    let download_bytes = stats.rx_bytes.saturating_sub(prev_bytes_recv);
+                    let upload_bytes = stats.tx_bytes.saturating_sub(prev_bytes_sent);
+                    let pkts_recv_delta = stats.rx_packets.saturating_sub(prev_packets_recv);
+                    let pkts_sent_delta = stats.tx_packets.saturating_sub(prev_packets_sent);
 
                     let download_mbps =
                         (download_bytes as f64 * 8.0) / (interval_secs * 1_000_000.0);
                     let upload_mbps = (upload_bytes as f64 * 8.0) / (interval_secs * 1_000_000.0);
 
-                    prev_bytes_recv = bytes_recv;
-                    prev_bytes_sent = bytes_sent;
-                    prev_packets_recv = packets_recv;
-                    prev_packets_sent = packets_sent;
+                    prev_bytes_recv = stats.rx_bytes;
+                    prev_bytes_sent = stats.tx_bytes;
+                    prev_packets_recv = stats.rx_packets;
+                    prev_packets_sent = stats.tx_packets;
 
                     // Medir latencia (ping al gateway)
                     let latency = measure_latency().unwrap_or(0.0);
@@ -105,10 +118,10 @@ pub async fn start_monitoring(
                         latency_ms: latency,
                         packets_sent_per_sec: (pkts_sent_delta as f64 / interval_secs) as u64,
                         packets_recv_per_sec: (pkts_recv_delta as f64 / interval_secs) as u64,
-                        errors_in: errors.0,
-                        errors_out: errors.1,
-                        drops_in: drops.0,
-                        drops_out: drops.1,
+                        errors_in: stats.rx_errors,
+                        errors_out: stats.tx_errors,
+                        drops_in: stats.rx_dropped,
+                        drops_out: stats.tx_dropped,
                         timestamp: chrono::Local::now().to_rfc3339(),
                     }
                 }
@@ -135,8 +148,7 @@ pub async fn stop_monitoring() -> Result<(), String> {
 /// Obtener métricas actuales
 #[tauri::command]
 pub async fn get_current_metrics(adapter: String) -> Result<NetworkMetrics, String> {
-    let (_bytes_recv, _bytes_sent, packets_recv, packets_sent, errors, drops) =
-        get_adapter_metrics(&adapter).map_err(|e| e.to_string())?;
+    let stats = get_adapter_metrics(&adapter).map_err(|e| e.to_string())?;
 
     let latency = measure_latency().unwrap_or(0.0);
 
@@ -144,20 +156,18 @@ pub async fn get_current_metrics(adapter: String) -> Result<NetworkMetrics, Stri
         download_mbps: 0.0, // Requiere medición delta
         upload_mbps: 0.0,
         latency_ms: latency,
-        packets_sent_per_sec: packets_sent,
-        packets_recv_per_sec: packets_recv,
-        errors_in: errors.0,
-        errors_out: errors.1,
-        drops_in: drops.0,
-        drops_out: drops.1,
+        packets_sent_per_sec: stats.tx_packets,
+        packets_recv_per_sec: stats.rx_packets,
+        errors_in: stats.rx_errors,
+        errors_out: stats.tx_errors,
+        drops_in: stats.rx_dropped,
+        drops_out: stats.tx_dropped,
         timestamp: chrono::Local::now().to_rfc3339(),
     })
 }
 
-/// Obtener métricas del adaptador usando PowerShell
-fn get_adapter_metrics(
-    adapter: &str,
-) -> Result<(u64, u64, u64, u64, (u64, u64), (u64, u64)), Box<dyn std::error::Error>> {
+/// Obtener métricas del adaptador de red
+fn get_adapter_metrics(adapter: &str) -> Result<AdapterStats, Box<dyn std::error::Error>> {
     #[cfg(not(windows))]
     {
         let read_stat = |name: &str| -> Result<u64, Box<dyn std::error::Error>> {
@@ -166,14 +176,16 @@ fn get_adapter_metrics(
             Ok(value.trim().parse().unwrap_or(0))
         };
 
-        return Ok((
-            read_stat("rx_bytes")?,
-            read_stat("tx_bytes")?,
-            read_stat("rx_packets")?,
-            read_stat("tx_packets")?,
-            (read_stat("rx_errors")?, read_stat("tx_errors")?),
-            (read_stat("rx_dropped")?, read_stat("tx_dropped")?),
-        ));
+        Ok(AdapterStats {
+            rx_bytes: read_stat("rx_bytes")?,
+            tx_bytes: read_stat("tx_bytes")?,
+            rx_packets: read_stat("rx_packets")?,
+            tx_packets: read_stat("tx_packets")?,
+            rx_errors: read_stat("rx_errors")?,
+            tx_errors: read_stat("tx_errors")?,
+            rx_dropped: read_stat("rx_dropped")?,
+            tx_dropped: read_stat("tx_dropped")?,
+        })
     }
 
     #[cfg(windows)]
@@ -199,16 +211,18 @@ fn get_adapter_metrics(
         let parts: Vec<&str> = stdout.trim().split('|').collect();
 
         if parts.len() >= 8 {
-            Ok((
-                parts[0].parse().unwrap_or(0),
-                parts[1].parse().unwrap_or(0),
-                parts[2].parse().unwrap_or(0),
-                parts[3].parse().unwrap_or(0),
-                (parts[4].parse().unwrap_or(0), parts[5].parse().unwrap_or(0)),
-                (parts[6].parse().unwrap_or(0), parts[7].parse().unwrap_or(0)),
-            ))
+            Ok(AdapterStats {
+                rx_bytes: parts[0].parse().unwrap_or(0),
+                tx_bytes: parts[1].parse().unwrap_or(0),
+                rx_packets: parts[2].parse().unwrap_or(0),
+                tx_packets: parts[3].parse().unwrap_or(0),
+                rx_errors: parts[4].parse().unwrap_or(0),
+                tx_errors: parts[5].parse().unwrap_or(0),
+                rx_dropped: parts[6].parse().unwrap_or(0),
+                tx_dropped: parts[7].parse().unwrap_or(0),
+            })
         } else {
-            Ok((0, 0, 0, 0, (0, 0), (0, 0)))
+            Ok(AdapterStats::default())
         }
     }
 }

@@ -154,7 +154,7 @@ pub fn is_dns_dhcp(adapter: &str) -> Result<bool, String> {
     let ipv6_ignore = normalize_nm_bool(lines.next().unwrap_or(""));
     let ipv6_dns = lines.next().unwrap_or("").trim();
 
-    Ok(!(ipv4_ignore || ipv6_ignore || !ipv4_dns.is_empty() || !ipv6_dns.is_empty()))
+    Ok(!ipv4_ignore && !ipv6_ignore && ipv4_dns.is_empty() && ipv6_dns.is_empty())
 }
 
 /// Proveedores DNS predefinidos
@@ -254,9 +254,9 @@ pub fn get_primary_adapter() -> Result<String, String> {
             return Ok(device.to_string());
         }
 
-        return Err(
+        Err(
             "No se encontró un adaptador Linux activo administrado por NetworkManager".to_string(),
-        );
+        )
     }
 
     #[cfg(windows)]
@@ -297,7 +297,7 @@ pub fn set_dns(adapter: &str, primary: &str, secondary: Option<&str>) -> Result<
             ],
         )?;
         reapply_connection(adapter, &connection)?;
-        return Ok(true);
+        Ok(true)
     }
 
     #[cfg(windows)]
@@ -349,7 +349,7 @@ pub fn reset_dns_to_dhcp(adapter: &str) -> Result<bool, String> {
             ],
         )?;
         reapply_connection(adapter, &connection)?;
-        return Ok(true);
+        Ok(true)
     }
 
     #[cfg(windows)]
@@ -382,7 +382,7 @@ pub fn flush_dns_cache() -> Result<bool, String> {
             .output()
             .map_err(|e| format!("Error limpiando caché DNS: {}", e))?;
 
-        return Ok(output.status.success());
+        Ok(output.status.success())
     }
 
     #[cfg(windows)]
@@ -435,9 +435,9 @@ pub fn ping_dns(dns_server: &str) -> Result<f64, String> {
             .and_then(|value| value.split_whitespace().next())
             .ok_or_else(|| "No se pudo extraer latencia del ping".to_string())?;
 
-        return latency
+        latency
             .parse::<f64>()
-            .map_err(|e| format!("Error parsing latency: {}", e));
+            .map_err(|e| format!("Error parsing latency: {}", e))
     }
 
     #[cfg(windows)]
@@ -473,7 +473,7 @@ pub fn check_dns_resolution(dns_server: &str, domain: &str) -> Result<bool, Stri
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        return Ok(stdout.contains("Address") && !stdout.contains("can't find"));
+        Ok(stdout.contains("Address") && !stdout.contains("can't find"))
     }
 
     #[cfg(windows)]
