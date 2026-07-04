@@ -56,6 +56,10 @@ path = "src/main.rs"
 name = "netboozt-headless"
 path = "src/bin/netboozt-headless.rs"
 
-[[bin]]
-name = "netboozt-service"
-path = "src/bin/netboozt-service.rs"
+# NOTE: netboozt-service is NOT included in [[bin]] because:
+# - Tauri NSIS bundler tries to include ALL [[bin]] outputs.
+# - NSIS derives the service binary name from the windows_service module path,
+#   looking for windows_service.exe instead of netboozt-service.exe.
+# - The service binary is Windows-only; to build it:
+#     cargo build --release --bin netboozt-service
+#   It will appear at target/release/netboozt-service.exe
