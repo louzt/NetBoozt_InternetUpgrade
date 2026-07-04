@@ -10,8 +10,7 @@ rust-version = "1.70"
 default-run = "netboozt"
 
 # Disable automatic binary discovery — only explicitly-declared [[bin]] targets
-# are built. This prevents cargo from auto-discovering src/bin/netboozt-service.rs
-# (which contains #[cfg(windows)] code) during linting on Linux/macOS.
+# are built. This prevents accidental compilation of test/bench binaries.
 autobins = false
 
 # See more keys at https://doc.rust-lang.org/cargo/reference/manifest.html
