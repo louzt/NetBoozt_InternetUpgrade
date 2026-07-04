@@ -254,9 +254,7 @@ pub fn get_primary_adapter() -> Result<String, String> {
             return Ok(device.to_string());
         }
 
-        Err(
-            "No se encontró un adaptador Linux activo administrado por NetworkManager".to_string(),
-        )
+        Err("No se encontró un adaptador Linux activo administrado por NetworkManager".to_string())
     }
 
     #[cfg(windows)]
