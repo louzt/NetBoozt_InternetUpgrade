@@ -9,6 +9,12 @@ edition = "2021"
 rust-version = "1.70"
 default-run = "netboozt"
 
+# Disable automatic binary discovery — we only want explicitly-declared [[bin]].
+# This prevents cargo from compiling src/bin/netboozt-service.rs (which has
+# windows-specific code) during normal builds, avoiding dead_code warnings
+# from clippy --all-targets on non-Windows hosts.
+autobins = false
+
 # See more keys at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
