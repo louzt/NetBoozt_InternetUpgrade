@@ -3,6 +3,7 @@
 //! Comandos Tauri para operaciones de red.
 
 use serde::{Deserialize, Serialize};
+#[cfg(not(windows))]
 use std::fs;
 #[cfg(not(windows))]
 use std::path::{Path, PathBuf};

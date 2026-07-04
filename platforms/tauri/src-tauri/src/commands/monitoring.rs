@@ -5,7 +5,9 @@
 //! By LOUST (www.loust.pro)
 
 use serde::{Deserialize, Serialize};
+#[cfg(not(windows))]
 use std::fs;
+#[cfg(not(windows))]
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;

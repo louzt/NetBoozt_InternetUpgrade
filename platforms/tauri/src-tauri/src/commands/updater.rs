@@ -7,6 +7,7 @@ use std::fs;
 #[cfg(not(windows))]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+#[cfg(not(windows))]
 use std::process::Command;
 use tauri::{AppHandle, Manager};
 
