@@ -17,7 +17,7 @@
 #
 # Setup (one-time; only needed if exporting after re-install):
 #   distrobox create -i archlinux:latest -n arch-loust
-#   distrobox enter arch-loust -- sudo pacman -S speedtest-cli iperf3 mtr
+#   distrobox enter arch-loust -- sudo pacman -S speedtest-cli iperf3 mtr traceroute
 #   distrobox enter arch-loust -- distrobox-export \
 #       --bin /usr/bin/speedtest-cli \
 #       --bin /usr/bin/iperf3 \
@@ -52,11 +52,16 @@
 set -euo pipefail
 
 CONTAINER_NAME="${LZT_ARCH_LOUST:-arch-loust}"
-VERSION_TOOLS=(speedtest-cli iperf3 mtr traceroute)
 
 die() {
     echo "lzt-netdiag: $*" >&2
     exit 1
+}
+
+die_missing_tool() {
+    echo "lzt-netdiag: $*" >&2
+    # 127 matches bash convention for "command not found".
+    exit 127
 }
 
 usage() {
@@ -70,43 +75,48 @@ usage() {
 
 ensure_container_running() {
     command -v distrobox >/dev/null || die "distrobox not found in PATH"
-    if ! distrobox list 2>/dev/null | awk '{print $3}' | grep -qx "Up"; then
-        # Check if our specific container is up
-        if ! distrobox list 2>/dev/null | grep -q " ${CONTAINER_NAME} "; then
-            die "container '${CONTAINER_NAME}' not present. Create it: distrobox create -i archlinux:latest -n ${CONTAINER_NAME}"
-        fi
-        if distrobox list 2>/dev/null | grep " ${CONTAINER_NAME} " | grep -qv "Up"; then
-            die "container '${CONTAINER_NAME}' is not Up. Start it: distrobox start ${CONTAINER_NAME}"
-        fi
+    # Filter distrobox list output to our specific container; avoid the
+    # "any container is Up" shortcut which silently passes when another
+    # distrobox is running but ours is not.
+    local row
+    if ! row="$(distrobox list 2>/dev/null | grep -E "(^|[[:space:]])${CONTAINER_NAME}([[:space:]]|$)")"; then
+        die "container '${CONTAINER_NAME}' not present. Create it: distrobox create -i archlinux:latest -n ${CONTAINER_NAME}"
+    fi
+    # Status column varies between distrobox versions (1.4.x: 3rd col;
+    # 1.5+: 4th col with STATUS first). Use word-anchored match.
+    if ! echo "$row" | grep -wq "Up"; then
+        die "container '${CONTAINER_NAME}' is not Up. Start it: distrobox start ${CONTAINER_NAME}"
     fi
 }
 
 check_tool() {
     local tool="$1"
     command -v "$tool" >/dev/null 2>&1 || \
-        die "tool '${tool}' not exported on host. Re-run: distrobox enter ${CONTAINER_NAME} -- distrobox-export --bin /usr/bin/${tool} --export-path ~/.local/bin/"
+        die_missing_tool "tool '${tool}' not exported on host. Re-run: distrobox enter ${CONTAINER_NAME} -- distrobox-export --bin /usr/bin/${tool} --export-path ~/.local/bin/"
 }
 
-# Pre-flight: verify container + all 4 tools before dispatch.
-ensure_container_running
-for t in "${VERSION_TOOLS[@]}"; do
-    check_tool "$t"
-done
+# Dispatch happens in the case below; preflight (container + tool check)
+# runs ONLY for subcommands that actually need the distrobox exports
+# (st, i3, mtr, trace). Help, host, and version work without them.
 
 cmd="${1:-help}"
 shift || true
 
 case "$cmd" in
     st)
+        ensure_container_running; check_tool speedtest-cli
         exec speedtest-cli "$@"
         ;;
     i3)
+        ensure_container_running; check_tool iperf3
         exec iperf3 "$@"
         ;;
     mtr)
+        ensure_container_running; check_tool mtr
         exec mtr "$@"
         ;;
     trace)
+        ensure_container_running; check_tool traceroute
         exec traceroute "$@"
         ;;
     host)
@@ -123,10 +133,9 @@ case "$cmd" in
             [ -d "$iface/wireless" ] && basename "$iface"
         done)"
         if [ -n "$wl_list" ]; then
-            # $wl_list may contain multiple interface names separated by
-            # newlines from the subshell; use read -ra to make the
-            # word-splitting intent explicit and shellcheck-clean.
-            read -ra wl_arr <<< "$wl_list"
+            # Use mapfile so every newline-separated interface is preserved
+            # (read -ra <<< would only consume the first line).
+            mapfile -t wl_arr <<< "$wl_list"
             printf "  %s\n" "${wl_arr[@]}"
             # Link quality from /proc/net/wireless
             if [ -r /proc/net/wireless ]; then
@@ -142,7 +151,11 @@ case "$cmd" in
         printf "\n=== Gateway reachability (5 pings) ===\n"
         gw="$(ip route show default 2>/dev/null | awk '/default/ {print $3; exit}')"
         if [ -n "$gw" ]; then
-            ping -c 5 -W 2 "$gw" 2>&1 | tail -4
+            if command -v ping >/dev/null 2>&1; then
+                ping -c 5 -W 2 "$gw" 2>&1 | tail -4
+            else
+                echo "  (ping not installed on host — install iputils-ping / inetutils-ping to enable)"
+            fi
         else
             echo "  (no gateway detected)"
         fi

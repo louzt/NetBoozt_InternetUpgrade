@@ -30,11 +30,10 @@ PATH via `distrobox-export --bin`.
 ## Setup (one-time)
 
 ```sh
-# 1. Create the distrobox (Arch Linux base; speedtest-cli, iperf3, mtr are in
-#    upstream Arch; traceroute is bundled with `iputils` or installed as a
-#    separate package depending on image age).
+# 1. Create the distrobox (Arch Linux base; speedtest-cli, iperf3, mtr,
+#    traceroute are in upstream Arch repos).
 distrobox create -i archlinux:latest -n arch-loust
-distrobox enter arch-loust -- sudo pacman -S speedtest-cli iperf3 mtr
+distrobox enter arch-loust -- sudo pacman -S speedtest-cli iperf3 mtr traceroute
 
 # 2. Export each binary to the host PATH
 distrobox enter arch-loust -- distrobox-export \
