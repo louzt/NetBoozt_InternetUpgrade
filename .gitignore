@@ -58,6 +58,7 @@ network_failover.log
 
 # Development tools (NOT for end users - gitignored)
 tools/                      # Dev scripts (screenshot gen, favicon gen, etc.)
+!tools/linux-diag/            # Linux network diagnostics dispatcher (lzt-netdiag) - COMMITTED
 docs/assets/screenshots/    # Auto-generated screenshots (upload to VPS instead)
 playwright/                 # Browser automation cache
 .playwright/
