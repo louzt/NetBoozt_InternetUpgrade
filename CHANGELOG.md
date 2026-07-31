@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.1] - 2026-07-28
+
+### 📝 Changed
+- Dropped `docs/WHATS_NEW_V2.{1,2}.md` (duplicated Keep-a-Changelog content from this file; CHANGELOG.md is the single source of truth).
+
+### ℹ️ About this PATCH
+This is a **docs-only PATCH release**. The Windows installer binary is functionally identical to v3.1.0; the version string inside the installer still reads `3.1.0` because `Cargo.toml` was not bumped for a docs-only commit. The tag `v3.1.1` reflects the repo state (docs synced to CHANGELOG), not a code version change.
+
+---
+
+## [3.1.0] - 2026-07-04
+
+### 🐛 Fixed
+- Fix NSIS bundler failure blocking Windows builds.
+- Remove `netboozt-service` from CI builds (Windows Service feature to be re-implemented).
+- Simplify complex type in network monitoring.
+- Fix clippy warnings on stable Rust.
+
+---
+
+## [3.0.3] - 2026-03-27
+
+### 🚀 Performance & Build Improvements
+- Performance optimizations across the network monitoring pipeline.
+- Build pipeline hardening (CI + local dev workflow).
+
+### 📥 Installers
+- `NetBoozt_3.0.3_x64_en-US.msi` (MSI installer, recommended)
+- `NetBoozt_3.0.3_x64-setup.exe` (NSIS installer)
+
+---
+
 ## [2.1.0] - 2025-11-10
 
 ### 🎉 Added
