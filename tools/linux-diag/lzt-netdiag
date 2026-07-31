@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# lzt-netdiag — Network diagnostics dispatcher.
+#
+# Thin layer over speedtest-cli, iperf3, mtr and traceroute exported
+# from the 'arch-loust' Arch Linux distrobox. Each subcommand is a
+# pass-through to the underlying tool with its full flag surface; the
+# only extras are 'host' (local NIC auto-detect) and sensible bash
+# helpers (exit-code-friendly, --help via sed-extract).
+#
+# Why a dispatcher instead of calling the wrappers directly?
+#   - One short command (`lzt-netdiag st --simple`) instead of writing
+#     `distrobox enter arch-loust -- speedtest-cli --simple` every time.
+#   - Tab-completion target (single canonical name → can hook bash-completion).
+#   - Local-only affordances that the upstream tools don't have:
+#       * `host` → auto-detect Wi-Fi vs Ethernet interface + default route.
+#       * `version` → one-liner showing versions of all 4 tools.
+#
+# Setup (one-time; only needed if exporting after re-install):
+#   distrobox create -i archlinux:latest -n arch-loust
+#   distrobox enter arch-loust -- sudo pacman -S speedtest-cli iperf3 mtr
+#   distrobox enter arch-loust -- distrobox-export \
+#       --bin /usr/bin/speedtest-cli \
+#       --bin /usr/bin/iperf3 \
+#       --bin /usr/bin/mtr \
+#       --bin /usr/bin/traceroute \
+#       --export-path ~/.local/bin/
+#
+# Usage:
+#   lzt-netdiag st [--simple | --json | --list | --server N]    # speedtest-cli
+#   lzt-netdiag i3 [-c host] [-u] [-t sec] [-j]                 # iperf3
+#   lzt-netdiag mtr [-c N] [-w] [-J] host                       # mtr
+#   lzt-netdiag trace host                                      # traceroute
+#   lzt-netdiag host                                            # local NIC info
+#   lzt-netdiag version                                         # all 4 versions
+#   lzt-netdiag (-h | --help | help)
+#
+# Examples:
+#   lzt-netdiag st --simple
+#   lzt-netdiag st --json | jq '.download.bandwidth, .ping'
+#   lzt-netdiag i3 -c 192.168.1.64 -t 30
+#   lzt-netdiag i3 -c 192.168.1.64 -t 5 -u -b 1M         # UDP 1 Mb/s, 5s
+#   lzt-netdiag mtr 192.168.1.64 -c 30 -w                  # wide report
+#   lzt-netdiag mtr -J 192.168.1.64                        # JSON report
+#   lzt-netdiag host
+#
+# Exit codes: 0=OK, 1=argument/tool/container error,
+# 127=tool missing in PATH (re-export from arch-loust).
+#
+# Source of truth: this file is the canonical dispatcher. If you need
+# to extend, add a new case below and update the usage block above.
+
+set -euo pipefail
+
+CONTAINER_NAME="${LZT_ARCH_LOUST:-arch-loust}"
+VERSION_TOOLS=(speedtest-cli iperf3 mtr traceroute)
+
+die() {
+    echo "lzt-netdiag: $*" >&2
+    exit 1
+}
+
+usage() {
+    # Extract the doc block between the second '#' line and the first
+    # blank line. Robust against edits to header.
+    sed -n '3,/^[^#]/p' "$0" \
+        | sed -n '1,/^$/p' \
+        | sed 's/^# \{0,1\}//'
+    exit 0
+}
+
+ensure_container_running() {
+    command -v distrobox >/dev/null || die "distrobox not found in PATH"
+    if ! distrobox list 2>/dev/null | awk '{print $3}' | grep -qx "Up"; then
+        # Check if our specific container is up
+        if ! distrobox list 2>/dev/null | grep -q " ${CONTAINER_NAME} "; then
+            die "container '${CONTAINER_NAME}' not present. Create it: distrobox create -i archlinux:latest -n ${CONTAINER_NAME}"
+        fi
+        if distrobox list 2>/dev/null | grep " ${CONTAINER_NAME} " | grep -qv "Up"; then
+            die "container '${CONTAINER_NAME}' is not Up. Start it: distrobox start ${CONTAINER_NAME}"
+        fi
+    fi
+}
+
+check_tool() {
+    local tool="$1"
+    command -v "$tool" >/dev/null 2>&1 || \
+        die "tool '${tool}' not exported on host. Re-run: distrobox enter ${CONTAINER_NAME} -- distrobox-export --bin /usr/bin/${tool} --export-path ~/.local/bin/"
+}
+
+# Pre-flight: verify container + all 4 tools before dispatch.
+ensure_container_running
+for t in "${VERSION_TOOLS[@]}"; do
+    check_tool "$t"
+done
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+    st)
+        exec speedtest-cli "$@"
+        ;;
+    i3)
+        exec iperf3 "$@"
+        ;;
+    mtr)
+        exec mtr "$@"
+        ;;
+    trace)
+        exec traceroute "$@"
+        ;;
+    host)
+        # Local-only nic auto-detect. Uses host sysfs + iproute2.
+        printf "=== Interfaces ===\n"
+        ip -br addr show up 2>/dev/null \
+            || echo "(iproute2 not on host: ip -br not found)"
+        printf "\n=== Default route ===\n"
+        ip route show default 2>/dev/null \
+            || echo "(no default route)"
+        printf "\n=== Wireless interfaces (sysfs) ===\n"
+        # Cannot use `local` outside a function; use a subshell + captured stdout.
+        wl_list="$(for iface in /sys/class/net/*; do
+            [ -d "$iface/wireless" ] && basename "$iface"
+        done)"
+        if [ -n "$wl_list" ]; then
+            # $wl_list may contain multiple interface names separated by
+            # newlines from the subshell; use read -ra to make the
+            # word-splitting intent explicit and shellcheck-clean.
+            read -ra wl_arr <<< "$wl_list"
+            printf "  %s\n" "${wl_arr[@]}"
+            # Link quality from /proc/net/wireless
+            if [ -r /proc/net/wireless ]; then
+                printf "\n=== /proc/net/wireless ===\n"
+                awk 'NR>2 {printf "  %s\n", $0}' /proc/net/wireless
+            fi
+        else
+            echo "  (none)"
+        fi
+        printf "\n=== DNS resolvers (/etc/resolv.conf) ===\n"
+        awk '/^nameserver/ {printf "  %s\n", $2}' /etc/resolv.conf 2>/dev/null \
+            || echo "  (none / unreadable)"
+        printf "\n=== Gateway reachability (5 pings) ===\n"
+        gw="$(ip route show default 2>/dev/null | awk '/default/ {print $3; exit}')"
+        if [ -n "$gw" ]; then
+            ping -c 5 -W 2 "$gw" 2>&1 | tail -4
+        else
+            echo "  (no gateway detected)"
+        fi
+        ;;
+    version)
+        printf "speedtest-cli: " ; speedtest-cli --version 2>&1 | head -1
+        printf "iperf3:        " ; iperf3 --version 2>&1 | head -1
+        printf "mtr:           " ; mtr --version 2>&1 | head -1
+        # traceroute writes version to stderr (modern 2.x); capture both
+        printf "traceroute:    " ; traceroute --version 2>&1 | head -1
+        printf "container:     %s\n" "$CONTAINER_NAME"
+        ;;
+    -h|--help|help|"")
+        usage
+        ;;
+    *)
+        die "unknown subcommand '${cmd}'. Run: lzt-netdiag --help"
+        ;;
+esac
